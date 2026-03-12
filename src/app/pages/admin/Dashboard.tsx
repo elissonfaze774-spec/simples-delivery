@@ -383,7 +383,7 @@ export function AdminDashboard() {
   return (
     <AdminShell
       title="Dashboard"
-      subtitle={user.email}
+      subtitle={`Loja ${resolvedStore.name}`}
       storeName={resolvedStore.name}
       stats={[
         { label: 'Produtos', value: products.length, helper: 'Catálogo cadastrado' },
