@@ -1,0 +1,472 @@
+import { ArrowLeft, Trash2, Minus, Plus, Tag } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { useCart } from '../contexts/CartContext';
+import { useOrders } from '../contexts/OrderContext';
+import { useStore } from '../contexts/StoreContext';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { toast } from 'sonner';
+
+function formatMoney(value: number) {
+  return Number(value || 0).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
+}
+
+function normalizeString(value: unknown) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function onlyDigits(value: unknown) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function buildWhatsAppMessage(order: any, storeName: string, couponCode?: string) {
+  const itemsText = (order.items || [])
+    .map(
+      (item: any) =>
+        `${Number(item.quantity || 0)}x ${String(item.name || 'Produto')} - ${formatMoney(
+          Number(item.price || 0) * Number(item.quantity || 0)
+        )}`
+    )
+    .join('\n');
+
+  const lines = [
+    `Olá, ${storeName}`,
+    `Pedido ${order.code}`,
+    ``,
+    `Itens do pedido:`,
+    itemsText || 'Sem itens',
+    ``,
+    `Valores:`,
+    `Subtotal: ${formatMoney(Number(order.subtotal || 0))}`,
+  ];
+
+  if (Number(order.discount || 0) > 0 && couponCode) {
+    lines.push(`${couponCode}: -${formatMoney(Number(order.discount || 0))}`);
+  }
+
+  if (Number(order.deliveryFee || 0) > 0) {
+    lines.push(`Entrega: ${formatMoney(Number(order.deliveryFee || 0))}`);
+  }
+
+  lines.push(`Total: ${formatMoney(Number(order.total || 0))}`);
+
+  return lines.join('\n');
+}
+
+export function Cart() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const { items, removeFromCart, updateQuantity, clearCart, total } = useCart();
+  const { createOrder } = useOrders();
+  const { stores, getStore, getCouponByCode, isLoaded } = useStore();
+
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(
+    null
+  );
+  const [submitting, setSubmitting] = useState(false);
+
+  const storeIdFromQuery = searchParams.get('store');
+  const slugFromQuery = searchParams.get('slug');
+
+  const store = useMemo(() => {
+    if (!stores?.length) return undefined;
+
+    if (storeIdFromQuery) {
+      const byId =
+        getStore(storeIdFromQuery) ||
+        stores.find((s: any) => String(s.id) === String(storeIdFromQuery));
+
+      if (byId) return byId;
+    }
+
+    if (slugFromQuery) {
+      const bySlug = stores.find(
+        (s: any) => normalizeString(s.slug) === normalizeString(slugFromQuery)
+      );
+
+      if (bySlug) return bySlug;
+    }
+
+    if (items.length > 0) {
+      const firstItem: any = items[0];
+
+      const possibleStoreId =
+        firstItem?.storeId ||
+        firstItem?.store_id ||
+        firstItem?.product?.storeId ||
+        firstItem?.product?.store_id ||
+        firstItem?.product?.store?.id;
+
+      if (possibleStoreId) {
+        const byItemStoreId =
+          getStore(String(possibleStoreId)) ||
+          stores.find((s: any) => String(s.id) === String(possibleStoreId));
+
+        if (byItemStoreId) return byItemStoreId;
+      }
+    }
+
+    return stores.find((s: any) => s.active && !s.suspended) || stores[0];
+  }, [storeIdFromQuery, slugFromQuery, stores, items, getStore]);
+
+  const storeId = store?.id;
+
+  const handleApplyCoupon = () => {
+    if (!store || !storeId) {
+      toast.error('Loja não encontrada');
+      return;
+    }
+
+    if (!couponCode.trim()) {
+      toast.error('Digite um cupom');
+      return;
+    }
+
+    const normalizedCoupon = couponCode.trim().toUpperCase();
+    const coupon = getCouponByCode(storeId, normalizedCoupon);
+
+    if (!coupon) {
+      toast.error('Cupom inválido');
+      return;
+    }
+
+    if (!coupon.active) {
+      toast.error('Cupom expirado');
+      return;
+    }
+
+    setAppliedCoupon({ code: coupon.code, discount: coupon.discount });
+    toast.success(`Cupom aplicado! ${coupon.discount}% de desconto`);
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    toast.info('Cupom removido');
+  };
+
+  const subtotal = Number(total || 0);
+  const discount = appliedCoupon ? (subtotal * appliedCoupon.discount) / 100 : 0;
+  const deliveryFee = 0;
+  const finalTotal = Math.max(subtotal - discount + deliveryFee, 0);
+
+  const handleConfirmOrder = async () => {
+    if (submitting) return;
+
+    if (!items.length) {
+      toast.error('Carrinho vazio');
+      return;
+    }
+
+    if (!store || !storeId) {
+      toast.error('Loja não encontrada');
+      return;
+    }
+
+    const rawWhatsapp =
+      (store as any)?.whatsapp ||
+      (store as any)?.phone ||
+      (store as any)?.contactPhone ||
+      (store as any)?.telefone ||
+      '';
+
+    const whatsapp = onlyDigits(rawWhatsapp);
+
+    if (!whatsapp) {
+      toast.error('WhatsApp da loja não configurado');
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const createdOrder = await createOrder({
+        storeId: String(storeId),
+        customerName: 'Cliente',
+        customerPhone: 'Não informado',
+        customerAddress: 'Não informado',
+        customerReference: '',
+        customerNotes: appliedCoupon ? `Cupom aplicado: ${appliedCoupon.code}` : '',
+        paymentMethod: 'whatsapp',
+        items: items.map((item: any) => ({
+          id: String(item?.product?.id || item?.id || ''),
+          productId: String(item?.product?.id || item?.productId || item?.id || ''),
+          name: String(item?.product?.name || item?.name || 'Produto'),
+          price: Number(item?.product?.price || item?.price || 0),
+          quantity: Number(item?.quantity || 1),
+          image: String(item?.product?.image || item?.image || ''),
+          notes: String(item?.notes || ''),
+          storeId: String(
+            item?.product?.storeId || item?.storeId || storeId || ''
+          ),
+          categoryId: item?.product?.categoryId
+            ? String(item.product.categoryId)
+            : undefined,
+        })),
+        subtotal,
+        discount,
+        deliveryFee,
+        total: finalTotal,
+      });
+
+      const couponLabel = appliedCoupon ? `Cupom ${appliedCoupon.code}` : undefined;
+      const message = buildWhatsAppMessage(
+        createdOrder,
+        String((store as any)?.name || 'sua loja'),
+        couponLabel
+      );
+
+      const whatsappUrl = `https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`;
+
+      clearCart();
+      setAppliedCoupon(null);
+      setCouponCode('');
+
+      toast.success(`Pedido ${createdOrder.code} confirmado!`);
+
+      const orderPageUrl = store.slug
+        ? `/orders?slug=${encodeURIComponent(store.slug)}`
+        : `/orders?store=${encodeURIComponent(store.id)}`;
+
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      navigate(orderPageUrl);
+    } catch (error) {
+      console.error('Erro ao confirmar pedido:', error);
+      toast.error('Erro ao confirmar pedido');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const backUrl = store
+    ? store.slug
+      ? `/loja/${encodeURIComponent(store.slug)}`
+      : `/loja?store=${encodeURIComponent(store.id)}`
+    : '/loja';
+
+  if (!isLoaded && items.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="sticky top-0 z-10 bg-[#EA1D2C] shadow-sm">
+          <div className="mx-auto flex max-w-screen-lg items-center gap-3 px-4 py-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/loja')}
+              className="text-white hover:bg-white/10"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+
+            <h1 className="text-lg font-semibold text-white">Carrinho</h1>
+          </div>
+        </div>
+
+        <div className="mx-auto max-w-screen-lg px-4 py-6">
+          <div className="rounded-lg bg-white p-6 text-center shadow-sm">
+            <p className="text-gray-500">Carregando carrinho...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="sticky top-0 z-10 bg-[#EA1D2C] shadow-sm">
+        <div className="mx-auto flex max-w-screen-lg items-center gap-3 px-4 py-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(backUrl)}
+            className="text-white hover:bg-white/10"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+
+          <h1 className="text-lg font-semibold text-white">Carrinho</h1>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-screen-lg px-4 py-6">
+        {items.length === 0 ? (
+          <div className="py-12 text-center">
+            <p className="mb-4 text-gray-500">Seu carrinho está vazio</p>
+            <Button
+              onClick={() => navigate(backUrl)}
+              className="bg-[#EA1D2C] hover:bg-[#D01929]"
+            >
+              Ver Cardápio
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="mb-4 space-y-3">
+              {items.map((item: any, index: number) => {
+                const itemId = String(item?.product?.id || item?.id || `item-${index}`);
+                const itemName = String(item?.product?.name || item?.name || 'Produto');
+                const itemImage =
+                  item?.product?.image || item?.image || 'https://placehold.co/80x80?text=Produto';
+                const itemPrice = Number(item?.product?.price || item?.price || 0);
+                const itemQuantity = Number(item?.quantity || 1);
+
+                return (
+                  <div key={itemId} className="rounded-lg bg-white p-4 shadow-sm">
+                    <div className="flex gap-3">
+                      <img
+                        src={itemImage}
+                        alt={itemName}
+                        className="h-20 w-20 rounded object-cover"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src =
+                            'https://placehold.co/80x80?text=Produto';
+                        }}
+                      />
+
+                      <div className="flex-1">
+                        <h3 className="font-medium">{itemName}</h3>
+
+                        <p className="mt-1 font-semibold text-[#EA1D2C]">
+                          {formatMoney(itemPrice)}
+                        </p>
+
+                        <div className="mt-2 flex items-center gap-3">
+                          <div className="flex items-center gap-2 rounded-lg bg-gray-100">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => updateQuantity(itemId, itemQuantity - 1)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+
+                            <span className="w-8 text-center font-medium">
+                              {itemQuantity}
+                            </span>
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => updateQuantity(itemId, itemQuantity + 1)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFromCart(itemId)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="font-semibold text-[#EA1D2C]">
+                          {formatMoney(itemPrice * itemQuantity)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mb-4 rounded-lg bg-white p-4 shadow-sm">
+              <div className="mb-2 flex items-center gap-2">
+                <Tag className="h-5 w-5 text-[#EA1D2C]" />
+                <h3 className="font-medium">Cupom de Desconto</h3>
+              </div>
+
+              {!appliedCoupon ? (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Digite o cupom"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    className="flex-1"
+                  />
+
+                  <Button
+                    onClick={handleApplyCoupon}
+                    variant="outline"
+                    className="border-[#EA1D2C] text-[#EA1D2C] hover:bg-[#EA1D2C] hover:text-white"
+                  >
+                    Aplicar
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between rounded-lg bg-green-50 p-3">
+                  <div>
+                    <p className="font-medium text-green-700">{appliedCoupon.code}</p>
+                    <p className="text-sm text-green-600">
+                      {appliedCoupon.discount}% de desconto
+                    </p>
+                  </div>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemoveCoupon}
+                    className="text-red-500"
+                  >
+                    Remover
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <div className="mb-4 rounded-lg bg-white p-4 shadow-sm">
+              <div className="mb-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Subtotal</span>
+                  <span className="font-medium">{formatMoney(subtotal)}</span>
+                </div>
+
+                {appliedCoupon && (
+                  <div className="flex items-center justify-between text-green-600">
+                    <span>Desconto ({appliedCoupon.code})</span>
+                    <span className="font-medium">- {formatMoney(discount)}</span>
+                  </div>
+                )}
+
+                {deliveryFee > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Entrega</span>
+                    <span className="font-medium">{formatMoney(deliveryFee)}</span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between border-t pt-2">
+                  <span className="text-lg font-medium">Total</span>
+                  <span className="text-2xl font-bold text-[#EA1D2C]">
+                    {formatMoney(finalTotal)}
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleConfirmOrder}
+                disabled={submitting}
+                className="w-full bg-[#EA1D2C] hover:bg-[#D01929]"
+                size="lg"
+              >
+                {submitting ? 'Confirmando...' : 'Confirmar Pedido via WhatsApp'}
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
