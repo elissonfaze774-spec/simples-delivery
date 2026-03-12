@@ -65,7 +65,7 @@ function SimpleBarChart({ data }: { data: DailyChartItem[] }) {
     <div className="rounded-[24px] border border-red-950/40 bg-[#101010] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:rounded-[28px] sm:p-5">
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-emerald-300/80 sm:text-xs">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-red-300/80 sm:text-xs">
             Desempenho diário
           </p>
           <h3 className="mt-2 text-lg font-bold text-white sm:text-xl">
@@ -73,7 +73,7 @@ function SimpleBarChart({ data }: { data: DailyChartItem[] }) {
           </h3>
         </div>
 
-        <div className="w-fit rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-300 sm:text-xs">
+        <div className="w-fit rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 text-[11px] font-semibold text-red-300 sm:text-xs">
           Vendas da semana
         </div>
       </div>
@@ -147,7 +147,7 @@ function QuickStatCard({
         <div
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border sm:h-12 sm:w-12 ${
             isMoney
-              ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+              ? 'border-zinc-800 bg-zinc-900 text-zinc-300'
               : 'border-zinc-800 bg-zinc-900 text-zinc-300'
           }`}
         >
@@ -543,7 +543,7 @@ export function AdminDashboard() {
           <Card className="rounded-[24px] border border-red-950/40 bg-[#101010] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:rounded-[28px] sm:p-5">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-emerald-300/80 sm:text-xs">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-red-300/80 sm:text-xs">
                   Resumo mensal
                 </p>
                 <h3 className="mt-2 text-lg font-bold text-white sm:text-xl">
@@ -551,7 +551,7 @@ export function AdminDashboard() {
                 </h3>
               </div>
 
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-300">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-300">
                 <ArrowUpRight className="h-5 w-5" />
               </div>
             </div>
