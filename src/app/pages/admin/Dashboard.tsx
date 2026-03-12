@@ -65,7 +65,7 @@ function SimpleBarChart({ data }: { data: DailyChartItem[] }) {
     <div className="rounded-[24px] border border-red-950/40 bg-[#101010] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:rounded-[28px] sm:p-5">
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-red-300/80 sm:text-xs">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-emerald-300/80 sm:text-xs">
             Desempenho diário
           </p>
           <h3 className="mt-2 text-lg font-bold text-white sm:text-xl">
@@ -73,7 +73,7 @@ function SimpleBarChart({ data }: { data: DailyChartItem[] }) {
           </h3>
         </div>
 
-        <div className="w-fit rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 text-[11px] font-semibold text-red-300 sm:text-xs">
+        <div className="w-fit rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-300 sm:text-xs">
           Vendas da semana
         </div>
       </div>
@@ -86,14 +86,14 @@ function SimpleBarChart({ data }: { data: DailyChartItem[] }) {
             return (
               <div key={item.label} className="flex flex-1 flex-col items-center gap-2 sm:gap-3">
                 <div className="text-center">
-                  <div className="text-[10px] font-semibold text-red-300 sm:text-[11px]">
+                  <div className="text-[10px] font-semibold text-emerald-300 sm:text-[11px]">
                     {item.total > 0 ? formatMoney(item.total) : 'R$ 0,00'}
                   </div>
                 </div>
 
                 <div className="flex h-44 w-full items-end sm:h-52">
                   <div
-                    className="w-full rounded-t-2xl bg-gradient-to-t from-[#a30011] via-[#d91124] to-[#ff4458] transition-all"
+                    className="w-full rounded-t-2xl bg-gradient-to-t from-[#065f46] via-[#10b981] to-[#6ee7b7] transition-all"
                     style={{ height: `${height}%` }}
                     title={`${item.orders} pedido(s) • ${formatMoney(item.total)}`}
                   />
@@ -136,7 +136,7 @@ function QuickStatCard({
           <p className="text-sm font-medium text-zinc-400">{label}</p>
           <h3
             className={`mt-3 break-words text-2xl font-black tracking-tight sm:text-3xl ${
-              isMoney ? 'text-red-400' : 'text-white'
+              isMoney ? 'text-emerald-400' : 'text-white'
             }`}
           >
             {value}
@@ -147,7 +147,7 @@ function QuickStatCard({
         <div
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border sm:h-12 sm:w-12 ${
             isMoney
-              ? 'border-red-500/20 bg-red-500/10 text-red-300'
+              ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
               : 'border-zinc-800 bg-zinc-900 text-zinc-300'
           }`}
         >
@@ -433,7 +433,7 @@ export function AdminDashboard() {
               <div className="mt-6 grid gap-4 md:grid-cols-3">
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
                   <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">Hoje</p>
-                  <p className="mt-3 break-words text-2xl font-black text-red-400 sm:text-3xl">
+                  <p className="mt-3 break-words text-2xl font-black text-emerald-400 sm:text-3xl">
                     {formatMoney(todayRevenue)}
                   </p>
                   <p className="mt-2 text-sm text-zinc-300">Vendas do dia atual</p>
@@ -441,7 +441,7 @@ export function AdminDashboard() {
 
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
                   <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">Este mês</p>
-                  <p className="mt-3 break-words text-2xl font-black text-red-400 sm:text-3xl">
+                  <p className="mt-3 break-words text-2xl font-black text-emerald-400 sm:text-3xl">
                     {formatMoney(monthRevenue)}
                   </p>
                   <p className="mt-2 text-sm text-zinc-300">Faturamento mensal</p>
@@ -449,7 +449,7 @@ export function AdminDashboard() {
 
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
                   <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">Ticket médio</p>
-                  <p className="mt-3 break-words text-2xl font-black text-white sm:text-3xl">
+                  <p className="mt-3 break-words text-2xl font-black text-emerald-400 sm:text-3xl">
                     {formatMoney(averageTicket)}
                   </p>
                   <p className="mt-2 text-sm text-zinc-300">Valor médio por pedido</p>
@@ -543,7 +543,7 @@ export function AdminDashboard() {
           <Card className="rounded-[24px] border border-red-950/40 bg-[#101010] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:rounded-[28px] sm:p-5">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-red-300/80 sm:text-xs">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-emerald-300/80 sm:text-xs">
                   Resumo mensal
                 </p>
                 <h3 className="mt-2 text-lg font-bold text-white sm:text-xl">
@@ -551,7 +551,7 @@ export function AdminDashboard() {
                 </h3>
               </div>
 
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-300">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-300">
                 <ArrowUpRight className="h-5 w-5" />
               </div>
             </div>
@@ -559,7 +559,7 @@ export function AdminDashboard() {
             <div className="mt-6 space-y-4">
               <div className="rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
                 <p className="text-sm text-zinc-400">Faturamento mensal</p>
-                <p className="mt-2 break-words text-2xl font-black text-red-400 sm:text-3xl">
+                <p className="mt-2 break-words text-2xl font-black text-emerald-400 sm:text-3xl">
                   {formatMoney(monthRevenue)}
                 </p>
               </div>
@@ -572,7 +572,7 @@ export function AdminDashboard() {
 
                 <div className="rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
                   <p className="text-sm text-zinc-400">Ticket médio</p>
-                  <p className="mt-2 break-words text-2xl font-black text-white">
+                  <p className="mt-2 break-words text-2xl font-black text-emerald-400">
                     {formatMoney(averageTicket)}
                   </p>
                 </div>
@@ -669,7 +669,7 @@ export function AdminDashboard() {
                           {order.items.reduce((sum, item) => sum + item.quantity, 0)} itens
                         </div>
 
-                        <div className="text-xl font-black text-red-400">
+                        <div className="text-xl font-black text-emerald-400">
                           {formatMoney(Number(order.total || 0))}
                         </div>
                       </div>
