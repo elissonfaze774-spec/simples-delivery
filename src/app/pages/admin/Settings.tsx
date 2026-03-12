@@ -10,6 +10,7 @@ import { Card } from '../../components/ui/card';
 import { toast } from 'sonner';
 import { QRCodeSVG } from 'qrcode.react';
 import { AdminShell } from '../../components/admin/AdminShell';
+import { getStoreUrl } from '../../lib/urls';
 
 export function AdminSettings() {
   const navigate = useNavigate();
@@ -62,8 +63,8 @@ export function AdminSettings() {
     return <div className="p-6">Loja não encontrada.</div>;
   }
 
-  const storeIdentifier = resolvedStore.slug || resolvedStore.id;
-  const storeLink = `${window.location.origin}/?store=${encodeURIComponent(storeIdentifier)}`;
+  const storeSlug = resolvedStore.slug || resolvedStore.id;
+  const storeLink = getStoreUrl(storeSlug);
 
   const isStoreActive = Boolean(
     (resolvedStore as any).is_active ?? (resolvedStore as any).active ?? (resolvedStore as any).isActive
