@@ -144,13 +144,7 @@ function QuickStatCard({
           <p className="mt-2 text-sm text-zinc-500">{helper}</p>
         </div>
 
-        <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border sm:h-12 sm:w-12 ${
-            isMoney
-              ? 'border-zinc-800 bg-zinc-900 text-zinc-300'
-              : 'border-zinc-800 bg-zinc-900 text-zinc-300'
-          }`}
-        >
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900 text-zinc-300 sm:h-12 sm:w-12">
           <Icon className="h-5 w-5" />
         </div>
       </div>

@@ -108,7 +108,6 @@ export function AdminShell({
       </header>
 
       <div className="mx-auto max-w-[1600px] px-4 py-4 md:px-6 md:py-6 xl:px-8">
-        {/* MOBILE: conteúdo primeiro */}
         <div className="space-y-4 md:hidden">
           <main className="min-w-0">
             <div className="rounded-[24px] border border-red-950/30 bg-[#080808] p-3 shadow-[0_20px_60px_rgba(0,0,0,0.45)] sm:rounded-[28px] sm:p-4">
@@ -149,7 +148,11 @@ export function AdminShell({
                   className="rounded-[22px] border border-red-950/40 bg-[#0b0b0b] p-4 shadow-[0_8px_30px_rgba(0,0,0,0.35)]"
                 >
                   <p className="text-sm text-zinc-400">{stat.label}</p>
-                  <div className="mt-2 break-words text-2xl font-black tracking-tight text-white">
+                  <div
+                    className={`mt-2 break-words text-2xl font-black tracking-tight ${
+                      stat.label === 'Receita' ? 'text-emerald-400' : 'text-white'
+                    }`}
+                  >
                     {stat.value}
                   </div>
                   {stat.helper ? <p className="mt-2 text-xs text-zinc-500">{stat.helper}</p> : null}
@@ -159,7 +162,6 @@ export function AdminShell({
           ) : null}
         </div>
 
-        {/* DESKTOP */}
         <div className="hidden gap-6 md:grid md:grid-cols-[280px_minmax(0,1fr)]">
           <aside className="space-y-4">
             <Card className="overflow-hidden rounded-[30px] border border-red-950/40 bg-[#0b0b0b] shadow-[0_10px_35px_rgba(0,0,0,0.45)]">
@@ -209,7 +211,11 @@ export function AdminShell({
                     className="rounded-[26px] border border-red-950/40 bg-[#0b0b0b] p-4 shadow-[0_8px_30px_rgba(0,0,0,0.35)]"
                   >
                     <p className="text-sm text-zinc-400">{stat.label}</p>
-                    <div className="mt-2 break-words text-3xl font-black tracking-tight text-white">
+                    <div
+                      className={`mt-2 break-words text-3xl font-black tracking-tight ${
+                        stat.label === 'Receita' ? 'text-emerald-400' : 'text-white'
+                      }`}
+                    >
                       {stat.value}
                     </div>
                     {stat.helper ? <p className="mt-2 text-xs text-zinc-500">{stat.helper}</p> : null}
