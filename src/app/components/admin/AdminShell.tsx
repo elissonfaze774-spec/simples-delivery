@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Store as StoreIcon } from 'lucide-react';
+import { ArrowLeft, Store as StoreIcon, LogOut } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { Button } from '../ui/button';
 
 type AdminShellStat = {
   label: string;
@@ -50,6 +52,7 @@ export function AdminShell({
 }: AdminShellProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
 
   const headerText = subtitle?.trim() || storeName?.trim() || '';
 
@@ -58,6 +61,16 @@ export function AdminShell({
     if (onBack) return true;
     return shouldShowBackButton(location.pathname);
   }, [showBackButton, onBack, location.pathname]);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Erro ao sair:', error);
+    } finally {
+      navigate('/login', { replace: true });
+    }
+  };
 
   return (
     <div className="admin-shell min-h-screen bg-[#050505] text-white">
@@ -144,8 +157,35 @@ export function AdminShell({
               </div>
             </div>
 
-            {actions ? <div className="w-full lg:w-auto">{actions}</div> : null}
+            <div className="flex w-full items-start justify-between gap-3 lg:w-auto lg:justify-end">
+              <div className="hidden sm:block lg:hidden" />
+
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={handleLogout}
+                className="flex h-11 w-11 shrink-0 rounded-full border-zinc-700 bg-[#111111] text-white hover:border-[#f3162d]/40 hover:bg-[#191919] lg:hidden"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+
+              <div className="hidden lg:flex lg:items-center lg:gap-2">
+                {actions}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleLogout}
+                  className="rounded-full border-zinc-700 bg-[#111111] px-5 text-white hover:border-[#f3162d]/40 hover:bg-[#191919]"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
+                </Button>
+              </div>
+            </div>
           </div>
+
+          {actions ? <div className="mt-4 lg:hidden">{actions}</div> : null}
 
           {stats.length > 0 ? (
             <div
