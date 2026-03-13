@@ -8,6 +8,7 @@ import React, {
   useState,
 } from 'react';
 import { supabase } from '../lib/supabase';
+import { canAddProduct } from '../lib/planLimits';
 import { Store, Product, Category, Coupon, Plan } from '../types';
 
 interface StoreContextType {
@@ -188,6 +189,22 @@ function slugify(value: string) {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
+}
+
+function mapStorePlanToLimitPlan(plan?: string | null): 'simples' | 'pro' | 'premium' {
+  const normalized = String(plan || '').trim().toLowerCase();
+
+  if (normalized === 'premium') return 'premium';
+  if (normalized === 'pro') return 'pro';
+  return 'simples';
+}
+
+function getHumanPlanName(plan?: string | null) {
+  const normalized = String(plan || '').trim().toLowerCase();
+
+  if (normalized === 'premium') return 'Premium';
+  if (normalized === 'pro') return 'Pro';
+  return 'Simples';
 }
 
 function normalizeStore(store: any): Store {
@@ -820,6 +837,36 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const addProduct = useCallback(
     async (product: Product) => {
+      const storeId = String(product.storeId || '');
+      const store = stores.find((item) => String(item.id) === storeId);
+
+      if (!store) {
+        throw new Error('Loja não encontrada para cadastrar o produto.');
+      }
+
+      const currentProductsCount = products.filter(
+        (item) => String(item.storeId) === storeId
+      ).length;
+
+      const planCheck = canAddProduct(
+        mapStorePlanToLimitPlan((store as any).plan),
+        currentProductsCount
+      );
+
+      if (!planCheck.allowed) {
+        const currentPlanName = getHumanPlanName((store as any).plan);
+        const upgradeText =
+          currentPlanName === 'Simples'
+            ? 'Faça upgrade para Pro ou Premium para liberar mais produtos.'
+            : currentPlanName === 'Pro'
+            ? 'Faça upgrade para Premium para liberar produtos ilimitados.'
+            : 'Seu plano atual atingiu o limite.';
+
+        throw new Error(
+          `${planCheck.reason || 'Limite de produtos atingido.'} ${upgradeText}`
+        );
+      }
+
       const optimisticItem = normalizeProduct(product);
       const previous = [...products];
       const optimistic = [...previous, optimisticItem];
@@ -838,7 +885,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
     },
-    [products, reloadStoreData]
+    [products, reloadStoreData, stores]
   );
 
   const updateProduct = useCallback(

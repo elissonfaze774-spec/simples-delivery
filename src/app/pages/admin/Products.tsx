@@ -7,6 +7,8 @@ import {
   Pencil,
   Plus,
   Trash2,
+  Crown,
+  Sparkles,
   ShoppingBag,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -36,6 +38,30 @@ import { toast } from 'sonner';
 import { AdminShell } from '../../components/admin/AdminShell';
 import { AdminEmptyState } from '../../components/admin/AdminEmptyState';
 
+type UpgradeModalState = {
+  open: boolean;
+  title: string;
+  description: string;
+  currentPlan: string;
+  suggestedPlans: string[];
+};
+
+function getHumanPlanName(plan?: string | null) {
+  const normalized = String(plan || '').trim().toLowerCase();
+
+  if (normalized === 'premium') return 'Premium';
+  if (normalized === 'pro') return 'Pro';
+  return 'Simples';
+}
+
+function getSuggestedPlans(plan?: string | null) {
+  const normalized = String(plan || '').trim().toLowerCase();
+
+  if (normalized === 'pro') return ['Premium'];
+  if (normalized === 'premium') return [];
+  return ['Pro', 'Premium'];
+}
+
 export function AdminProducts() {
   const navigate = useNavigate();
   const { user, authLoading } = useAuth();
@@ -62,6 +88,13 @@ export function AdminProducts() {
   const [savingProduct, setSavingProduct] = useState(false);
   const [savingCategory, setSavingCategory] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [upgradeModal, setUpgradeModal] = useState<UpgradeModalState>({
+    open: false,
+    title: '',
+    description: '',
+    currentPlan: '',
+    suggestedPlans: [],
+  });
 
   useEffect(() => {
     if (authLoading) return;
@@ -89,6 +122,7 @@ export function AdminProducts() {
 
   const products = resolvedStore ? getStoreProducts(resolvedStore.id) : [];
   const categories = resolvedStore ? getStoreCategories(resolvedStore.id) : [];
+  const currentPlanName = getHumanPlanName((resolvedStore as any)?.plan);
 
   if (authLoading || !authChecked || !isLoaded) {
     return <div className="p-6">Carregando catálogo...</div>;
@@ -103,6 +137,19 @@ export function AdminProducts() {
   }
 
   const categoryMap = new Map(categories.map((category) => [category.id, category.name]));
+
+  const openUpgradeModalFromError = (message: string) => {
+    const planName = getHumanPlanName((resolvedStore as any)?.plan);
+    const suggestedPlans = getSuggestedPlans((resolvedStore as any)?.plan);
+
+    setUpgradeModal({
+      open: true,
+      title: 'Limite do plano atingido',
+      description: message,
+      currentPlan: planName,
+      suggestedPlans,
+    });
+  };
 
   const handleSubmitProduct = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -161,7 +208,23 @@ export function AdminProducts() {
       setSelectedCategoryId('none');
     } catch (error: any) {
       console.error('Erro ao salvar produto:', error);
-      toast.error(error?.message || 'Não foi possível salvar o produto.');
+
+      const message = error?.message || 'Não foi possível salvar o produto.';
+
+      if (
+        String(message).toLowerCase().includes('limite') &&
+        String(message).toLowerCase().includes('produto')
+      ) {
+        toast.error('Limite de produtos atingido', {
+          description: message,
+        });
+
+        setOpenProduct(false);
+        openUpgradeModalFromError(message);
+        return;
+      }
+
+      toast.error(message);
     } finally {
       setSavingProduct(false);
     }
@@ -428,6 +491,33 @@ export function AdminProducts() {
           </div>
         </Card>
 
+        <Card className="rounded-3xl border border-red-100 bg-gradient-to-r from-red-50 via-white to-red-50 p-5 shadow-sm">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-100">
+                <ShoppingBag className="h-5 w-5 text-red-500" />
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-red-500">Plano atual</p>
+                <h3 className="text-xl font-bold text-slate-900">{currentPlanName}</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  Se atingir o limite de produtos, o sistema bloqueia novos cadastros e exibe upgrade.
+                </p>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full border-red-200 text-red-600 hover:bg-red-50"
+              onClick={() => navigate('/super-admin')}
+            >
+              Ver planos
+            </Button>
+          </div>
+        </Card>
+
         <Tabs defaultValue="products" className="space-y-6">
           <TabsList className="rounded-full bg-slate-100 p-1">
             <TabsTrigger value="products" className="rounded-full">
@@ -570,6 +660,87 @@ export function AdminProducts() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog
+        open={upgradeModal.open}
+        onOpenChange={(open) =>
+          setUpgradeModal((prev) => ({
+            ...prev,
+            open,
+          }))
+        }
+      >
+        <DialogContent className="border-red-100 bg-white sm:max-w-[560px]">
+          <DialogHeader>
+            <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50">
+              <Crown className="h-7 w-7 text-red-500" />
+            </div>
+
+            <DialogTitle className="text-2xl font-bold text-slate-900">
+              {upgradeModal.title}
+            </DialogTitle>
+
+            <DialogDescription className="mt-2 text-sm leading-6 text-slate-600">
+              {upgradeModal.description}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-4 grid gap-3">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-medium text-slate-500">Plano atual</p>
+              <p className="mt-1 text-lg font-bold text-slate-900">
+                {upgradeModal.currentPlan}
+              </p>
+            </div>
+
+            {upgradeModal.suggestedPlans.length > 0 && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {upgradeModal.suggestedPlans.map((plan) => (
+                  <div
+                    key={plan}
+                    className="rounded-2xl border border-red-100 bg-gradient-to-br from-red-50 to-white p-4"
+                  >
+                    <div className="mb-3 flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-red-500" />
+                      <span className="text-sm font-semibold text-red-500">
+                        Upgrade recomendado
+                      </span>
+                    </div>
+
+                    <h3 className="text-lg font-bold text-slate-900">{plan}</h3>
+
+                    <p className="mt-2 text-sm text-slate-600">
+                      Libere mais espaço para crescer sem bloqueios no catálogo.
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Button
+              onClick={() => navigate('/super-admin')}
+              className="h-11 flex-1 rounded-xl bg-red-500 text-white hover:bg-red-600"
+            >
+              Fazer upgrade agora
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() =>
+                setUpgradeModal((prev) => ({
+                  ...prev,
+                  open: false,
+                }))
+              }
+              className="h-11 flex-1 rounded-xl border-slate-200"
+            >
+              Fechar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AdminShell>
   );
 }

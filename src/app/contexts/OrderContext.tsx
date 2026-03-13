@@ -8,6 +8,8 @@ import React, {
   useState,
 } from 'react';
 import { supabase } from '../lib/supabase';
+import { canCreateOrderThisMonth } from '../lib/planLimits';
+import { useStore } from './StoreContext';
 import type { CartItem } from '../types';
 
 export type OrderStatus =
@@ -157,6 +159,42 @@ function safeNumber(value: any) {
   return Number.isFinite(num) ? num : 0;
 }
 
+function mapStorePlanToLimitPlan(plan?: string | null): 'simples' | 'pro' | 'premium' {
+  const normalized = String(plan || '').trim().toLowerCase();
+
+  if (normalized === 'premium') return 'premium';
+  if (normalized === 'pro') return 'pro';
+  return 'simples';
+}
+
+function getHumanPlanName(plan?: string | null) {
+  const normalized = String(plan || '').trim().toLowerCase();
+
+  if (normalized === 'premium') return 'Premium';
+  if (normalized === 'pro') return 'Pro';
+  return 'Simples';
+}
+
+function getOrdersCountThisMonth(
+  storeId: string,
+  orders: Array<{ storeId: string; createdAt: string }>
+) {
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  return orders.filter((order) => {
+    if (String(order.storeId) !== String(storeId)) return false;
+
+    const createdAt = new Date(order.createdAt);
+
+    return (
+      createdAt.getMonth() === currentMonth &&
+      createdAt.getFullYear() === currentYear
+    );
+  }).length;
+}
+
 function mapDbOrder(row: any): Order {
   const rawStatus = safeString(row?.status).toLowerCase();
   const status: OrderStatus = isValidOrderStatus(rawStatus) ? rawStatus : 'pending';
@@ -188,6 +226,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const isMounted = useRef(true);
   const refreshInFlight = useRef(false);
+  const { stores } = useStore();
 
   const refreshOrders = useCallback(async () => {
     if (refreshInFlight.current) return;
@@ -241,57 +280,88 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     };
   }, [refreshOrders]);
 
-  const createOrder = useCallback(async (input: CreateOrderInput) => {
-    const code = generateOrderCode();
-    const normalizedItems = normalizeOrderItems(input.items);
-    const now = new Date().toISOString();
+  const createOrder = useCallback(
+    async (input: CreateOrderInput) => {
+      const storeId = String(input.storeId || '');
+      const store = stores.find((item) => String(item.id) === storeId);
 
-    const payload = {
-      code,
-      store_id: String(input.storeId),
-      customer_name: String(input.customerName || ''),
-      customer_phone: String(input.customerPhone || ''),
-      customer_address: input.customerAddress?.trim() ? input.customerAddress : null,
-      customer_reference: input.customerReference?.trim() ? input.customerReference : null,
-      customer_notes: input.customerNotes?.trim() ? input.customerNotes : null,
-      payment_method: input.paymentMethod?.trim() ? input.paymentMethod : null,
-      items: normalizedItems,
-      subtotal: safeNumber(input.subtotal),
-      discount: safeNumber(input.discount),
-      delivery_fee: safeNumber(input.deliveryFee),
-      total: safeNumber(input.total),
-      status: 'pending' as OrderStatus,
-      updated_at: now,
-    };
+      if (!store) {
+        throw new Error('Loja não encontrada para criar o pedido.');
+      }
 
-    const { data, error } = await supabase
-      .from('orders')
-      .insert([payload])
-      .select('*')
-      .single();
+      const currentOrdersThisMonth = getOrdersCountThisMonth(storeId, orders);
 
-    if (error) {
-      console.error('Erro ao criar pedido:', error);
-      throw error;
-    }
+      const planCheck = canCreateOrderThisMonth(
+        mapStorePlanToLimitPlan((store as any).plan),
+        currentOrdersThisMonth
+      );
 
-    const created = mapDbOrder(data);
+      if (!planCheck.allowed) {
+        const currentPlanName = getHumanPlanName((store as any).plan);
+        const upgradeText =
+          currentPlanName === 'Simples'
+            ? 'Faça upgrade para Pro ou Premium para continuar recebendo pedidos.'
+            : currentPlanName === 'Pro'
+            ? 'Faça upgrade para Premium para liberar pedidos ilimitados.'
+            : 'Seu plano atual atingiu o limite.';
 
-    setOrders((prev) => {
-      const exists = prev.some((order) => order.id === created.id);
-      if (exists) return prev;
-      return [created, ...prev];
-    });
+        throw new Error(
+          `${planCheck.reason || 'Limite de pedidos do plano atingido.'} ${upgradeText}`
+        );
+      }
 
-    try {
-      localStorage.setItem('last_order_id', created.id);
-      localStorage.setItem('last_order_code', created.code);
-    } catch {
-      //
-    }
+      const code = generateOrderCode();
+      const normalizedItems = normalizeOrderItems(input.items);
+      const now = new Date().toISOString();
 
-    return created;
-  }, []);
+      const payload = {
+        code,
+        store_id: storeId,
+        customer_name: String(input.customerName || ''),
+        customer_phone: String(input.customerPhone || ''),
+        customer_address: input.customerAddress?.trim() ? input.customerAddress : null,
+        customer_reference: input.customerReference?.trim() ? input.customerReference : null,
+        customer_notes: input.customerNotes?.trim() ? input.customerNotes : null,
+        payment_method: input.paymentMethod?.trim() ? input.paymentMethod : null,
+        items: normalizedItems,
+        subtotal: safeNumber(input.subtotal),
+        discount: safeNumber(input.discount),
+        delivery_fee: safeNumber(input.deliveryFee),
+        total: safeNumber(input.total),
+        status: 'pending' as OrderStatus,
+        updated_at: now,
+      };
+
+      const { data, error } = await supabase
+        .from('orders')
+        .insert([payload])
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error('Erro ao criar pedido:', error);
+        throw error;
+      }
+
+      const created = mapDbOrder(data);
+
+      setOrders((prev) => {
+        const exists = prev.some((order) => order.id === created.id);
+        if (exists) return prev;
+        return [created, ...prev];
+      });
+
+      try {
+        localStorage.setItem('last_order_id', created.id);
+        localStorage.setItem('last_order_code', created.code);
+      } catch {
+        //
+      }
+
+      return created;
+    },
+    [orders, stores]
+  );
 
   const updateOrderStatus = useCallback(async (id: string, status: OrderStatus) => {
     if (!isValidOrderStatus(status)) {
