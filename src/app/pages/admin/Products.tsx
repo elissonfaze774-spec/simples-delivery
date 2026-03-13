@@ -330,7 +330,8 @@ export function AdminProducts() {
   };
 
   const handleDeleteCategory = async (id: string) => {
-    if (!confirm('Deseja realmente excluir esta categoria? Os produtos dela ficarão sem categoria.')) return;
+    if (!confirm('Deseja realmente excluir esta categoria? Os produtos dela ficarão sem categoria.'))
+      return;
 
     try {
       await deleteCategory(id);
@@ -447,8 +448,8 @@ export function AdminProducts() {
                   {savingProduct
                     ? 'Salvando...'
                     : editingProduct
-                    ? 'Salvar alterações'
-                    : 'Criar produto'}
+                      ? 'Salvar alterações'
+                      : 'Criar produto'}
                 </Button>
               </form>
             </DialogContent>
@@ -464,9 +465,7 @@ export function AdminProducts() {
 
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>
-                  {editingCategory ? 'Editar categoria' : 'Nova categoria'}
-                </DialogTitle>
+                <DialogTitle>{editingCategory ? 'Editar categoria' : 'Nova categoria'}</DialogTitle>
                 <DialogDescription>
                   {editingCategory
                     ? 'Atualize a categoria.'
@@ -493,8 +492,8 @@ export function AdminProducts() {
                   {savingCategory
                     ? 'Salvando...'
                     : editingCategory
-                    ? 'Salvar alterações'
-                    : 'Criar categoria'}
+                      ? 'Salvar alterações'
+                      : 'Criar categoria'}
                 </Button>
               </form>
             </DialogContent>
@@ -547,7 +546,8 @@ export function AdminProducts() {
                 <p className="text-sm font-medium text-red-500">Plano atual</p>
                 <h3 className="text-xl font-bold text-slate-900">{currentPlanName}</h3>
                 <p className="mt-1 text-sm text-slate-600">
-                  Se atingir o limite de produtos, o sistema bloqueia novos cadastros e exibe upgrade.
+                  Se atingir o limite de produtos, o sistema bloqueia novos cadastros e exibe
+                  upgrade.
                 </p>
               </div>
             </div>
@@ -560,7 +560,8 @@ export function AdminProducts() {
                 openUpgradeWhatsApp({
                   storeName: resolvedStore.name,
                   currentPlan: currentPlanName,
-                  reason: 'Quero conhecer as opções de upgrade para ampliar o catálogo da minha loja.',
+                  reason:
+                    'Quero conhecer as opções de upgrade para ampliar o catálogo da minha loja.',
                 })
               }
             >
@@ -739,9 +740,7 @@ export function AdminProducts() {
           <div className="mt-4 grid gap-3">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-sm font-medium text-slate-500">Plano atual</p>
-              <p className="mt-1 text-lg font-bold text-slate-900">
-                {upgradeModal.currentPlan}
-              </p>
+              <p className="mt-1 text-lg font-bold text-slate-900">{upgradeModal.currentPlan}</p>
             </div>
 
             {upgradeModal.suggestedPlans.length > 0 && (
@@ -775,7 +774,9 @@ export function AdminProducts() {
                 openUpgradeWhatsApp({
                   storeName: resolvedStore.name,
                   currentPlan: upgradeModal.currentPlan || currentPlanName,
-                  reason: upgradeModal.description || 'Atingi o limite do meu plano e preciso ampliar minha capacidade.',
+                  reason:
+                    upgradeModal.description ||
+                    'Atingi o limite do meu plano e preciso ampliar minha capacidade.',
                 })
               }
               className="h-11 flex-1 rounded-xl bg-red-500 text-white hover:bg-red-600"
