@@ -1,6 +1,13 @@
-import { Check, Copy, Globe, MessageCircle, QrCode as QrCodeIcon, Store as StoreIcon } from 'lucide-react';
+import {
+  Check,
+  Copy,
+  Globe,
+  MessageCircle,
+  QrCode as QrCodeIcon,
+  Store as StoreIcon,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useStore } from '../../contexts/StoreContext';
 import { Button } from '../../components/ui/button';
@@ -38,13 +45,9 @@ export function AdminSettings() {
     if (directStore) return directStore;
 
     const byEmail = getStoreByAdminEmail(user.email);
-    if (byEmail) {
-      console.warn('[AdminSettings] fallback: found store by email');
-      return byEmail;
-    }
+    if (byEmail) return byEmail;
 
     if (isLoaded && stores.length === 1) {
-      console.warn('[AdminSettings] fallback: only one store available, using it');
       return stores[0];
     }
 
@@ -52,7 +55,7 @@ export function AdminSettings() {
   }, [user, isLoaded, stores, getStore, getStoreByAdminEmail]);
 
   if (authLoading || !authChecked || (!isLoaded && stores.length === 0)) {
-    return <div className="p-6">Carregando configurações...</div>;
+    return <div className="p-6 text-white">Carregando configurações...</div>;
   }
 
   if (!user || user.role !== 'admin') {
@@ -60,20 +63,20 @@ export function AdminSettings() {
   }
 
   if (!resolvedStore) {
-    return <div className="p-6">Loja não encontrada.</div>;
+    return <div className="p-6 text-white">Loja não encontrada.</div>;
   }
 
   const storeSlug = resolvedStore.slug || resolvedStore.id;
   const storeLink = getStoreUrl(storeSlug);
 
   const isStoreActive = Boolean(
-    (resolvedStore as any).is_active ?? (resolvedStore as any).active ?? (resolvedStore as any).isActive
+    (resolvedStore as any).is_active ??
+      (resolvedStore as any).active ??
+      (resolvedStore as any).isActive
   );
 
   const currentPlan =
-    (resolvedStore as any).plan ||
-    (resolvedStore as any).plan_id ||
-    'iniciante';
+    (resolvedStore as any).plan || (resolvedStore as any).plan_id || 'iniciante';
 
   const handleCopyLink = async () => {
     try {
@@ -87,12 +90,14 @@ export function AdminSettings() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (saving) return;
 
     if (!isLoaded || !resolvedStore) {
-      toast.error('Dados da loja ainda estão sendo carregados. Aguarde alguns instantes e tente novamente.');
+      toast.error(
+        'Dados da loja ainda estão sendo carregados. Aguarde alguns instantes e tente novamente.'
+      );
       return;
     }
 
@@ -139,23 +144,33 @@ export function AdminSettings() {
       title="Configurações"
       subtitle="Ajuste sua loja e compartilhe com facilidade"
       storeName={resolvedStore.name}
+      onBack={() => navigate('/admin')}
       stats={[
-        { label: 'Loja ativa', value: isStoreActive ? 'Sim' : 'Não' },
-        { label: 'Plano', value: currentPlan },
+        {
+          label: 'Loja ativa',
+          value: isStoreActive ? 'Sim' : 'Não',
+          helper: 'Status atual da sua loja',
+        },
+        {
+          label: 'Plano',
+          value: currentPlan,
+          helper: 'Plano atual contratado',
+        },
       ]}
     >
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <div className="space-y-6">
           <Card className="rounded-[28px] border-0 bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_100%)] p-6 text-white">
             <div className="flex items-start justify-between gap-4">
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm uppercase tracking-[0.25em] text-white/60">Link público</p>
                 <h2 className="mt-3 text-2xl font-bold">Compartilhe sua loja</h2>
                 <p className="mt-2 text-sm text-white/75">
                   Use o link ou QR Code para divulgar seu cardápio e receber pedidos.
                 </p>
               </div>
-              <Globe className="h-5 w-5 text-white/70" />
+
+              <Globe className="h-5 w-5 shrink-0 text-white/70" />
             </div>
 
             <div className="mt-5 break-all rounded-3xl bg-white/10 p-4 text-sm text-white/90">
@@ -168,7 +183,11 @@ export function AdminSettings() {
                 onClick={handleCopyLink}
                 className="rounded-full bg-white text-slate-950 hover:bg-white/90"
               >
-                {copiedLink ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                {copiedLink ? (
+                  <Check className="mr-2 h-4 w-4" />
+                ) : (
+                  <Copy className="mr-2 h-4 w-4" />
+                )}
                 {copiedLink ? 'Copiado' : 'Copiar link'}
               </Button>
 
@@ -189,7 +208,7 @@ export function AdminSettings() {
               QR Code da loja
             </div>
 
-            <div className="inline-flex rounded-[28px] bg-slate-50 p-5">
+            <div className="inline-flex max-w-full rounded-[28px] bg-slate-50 p-5">
               <QRCodeSVG value={storeLink} size={220} includeMargin />
             </div>
           </Card>

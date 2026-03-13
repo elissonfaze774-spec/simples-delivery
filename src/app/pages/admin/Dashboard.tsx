@@ -7,6 +7,7 @@ import {
   Tag,
   TrendingUp,
   Wallet,
+  LayoutGrid,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -23,6 +24,13 @@ type DailyChartItem = {
   label: string;
   total: number;
   orders: number;
+};
+
+type QuickManageItem = {
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  onClick: () => void;
 };
 
 function formatMoney(value: number) {
@@ -342,6 +350,27 @@ export function AdminDashboard() {
     window.open(absoluteStoreUrl, '_blank', 'noopener,noreferrer');
   };
 
+  const manageItems: QuickManageItem[] = [
+    {
+      label: 'Produtos',
+      description: 'Criar, editar e organizar itens',
+      icon: ShoppingBag,
+      onClick: () => navigate('/admin/products'),
+    },
+    {
+      label: 'Categorias',
+      description: 'Gerenciar categorias da loja',
+      icon: LayoutGrid,
+      onClick: () => navigate('/admin/products'),
+    },
+    {
+      label: 'Cupons',
+      description: 'Criar descontos e campanhas',
+      icon: Tag,
+      onClick: () => navigate('/admin/coupons'),
+    },
+  ];
+
   return (
     <AdminShell
       title="Dashboard"
@@ -487,59 +516,85 @@ export function AdminDashboard() {
           />
         </section>
 
+        <section className="grid gap-3 sm:grid-cols-3">
+          {manageItems.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <button
+                key={item.label}
+                type="button"
+                onClick={item.onClick}
+                className="flex min-h-[112px] items-center gap-3 rounded-[24px] border border-red-950/40 bg-[#101010] px-4 py-4 text-left shadow-[0_10px_30px_rgba(0,0,0,0.25)] transition hover:border-[#f3162d]/35 hover:bg-[#141414] sm:gap-4"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#f3162d]/25 bg-[#f3162d]/10 text-[#f3162d]">
+                  <Icon className="h-5 w-5" />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="text-base font-black text-white">{item.label}</p>
+                  <p className="mt-1 text-sm text-zinc-400">{item.description}</p>
+                </div>
+
+                <ArrowUpRight className="h-4 w-4 shrink-0 text-zinc-500" />
+              </button>
+            );
+          })}
+        </section>
+
         <section className="grid min-w-0 gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-  <div className="mx-auto w-full min-w-0 max-w-full">
-    <SimpleBarChart data={last7DaysData} />
-  </div>
+          <div className="mx-auto w-full min-w-0 max-w-full">
+            <SimpleBarChart data={last7DaysData} />
+          </div>
 
-  <Card className="mx-auto w-full min-w-0 max-w-full overflow-hidden rounded-[24px] border border-red-950/40 bg-[#101010] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:rounded-[28px] sm:p-5">
-    <div className="flex items-start justify-between gap-4">
-      <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#f3162d] sm:text-xs">
-          Resumo mensal
-        </p>
-        <h3 className="mt-2 text-lg font-bold text-white sm:text-xl">Sua loja este mês</h3>
-      </div>
+          <Card className="mx-auto w-full min-w-0 max-w-full overflow-hidden rounded-[24px] border border-red-950/40 bg-[#101010] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:rounded-[28px] sm:p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#f3162d] sm:text-xs">
+                  Resumo mensal
+                </p>
+                <h3 className="mt-2 text-lg font-bold text-white sm:text-xl">Sua loja este mês</h3>
+              </div>
 
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#f3162d]/30 bg-[#f3162d]/10 text-[#f3162d]">
-        <ArrowUpRight className="h-5 w-5" />
-      </div>
-    </div>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#f3162d]/30 bg-[#f3162d]/10 text-[#f3162d]">
+                <ArrowUpRight className="h-5 w-5" />
+              </div>
+            </div>
 
-    <div className="mt-6 space-y-4">
-      <div className="rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
-        <p className="text-sm text-zinc-400">Faturamento mensal</p>
-        <p className="mt-2 break-words text-2xl font-black text-emerald-400 sm:text-3xl">
-          {formatMoney(monthRevenue)}
-        </p>
-      </div>
+            <div className="mt-6 space-y-4">
+              <div className="rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
+                <p className="text-sm text-zinc-400">Faturamento mensal</p>
+                <p className="mt-2 break-words text-2xl font-black text-emerald-400 sm:text-3xl">
+                  {formatMoney(monthRevenue)}
+                </p>
+              </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="min-w-0 rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
-          <p className="text-sm text-zinc-400">Pedidos do mês</p>
-          <p className="mt-2 break-words text-2xl font-black text-white">{monthOrders}</p>
-        </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="min-w-0 rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
+                  <p className="text-sm text-zinc-400">Pedidos do mês</p>
+                  <p className="mt-2 break-words text-2xl font-black text-white">{monthOrders}</p>
+                </div>
 
-        <div className="min-w-0 rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
-          <p className="text-sm text-zinc-400">Ticket médio</p>
-          <p className="mt-2 break-words text-2xl font-black text-emerald-400">
-            {formatMoney(averageTicket)}
-          </p>
-        </div>
-      </div>
+                <div className="min-w-0 rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
+                  <p className="text-sm text-zinc-400">Ticket médio</p>
+                  <p className="mt-2 break-words text-2xl font-black text-emerald-400">
+                    {formatMoney(averageTicket)}
+                  </p>
+                </div>
+              </div>
 
-      <div className="min-w-0 rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
-        <p className="text-sm text-zinc-400">Plano atual</p>
-        <p className="mt-2 break-words text-lg font-bold capitalize text-white">{currentPlan}</p>
-      </div>
+              <div className="min-w-0 rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
+                <p className="text-sm text-zinc-400">Plano atual</p>
+                <p className="mt-2 break-words text-lg font-bold capitalize text-white">{currentPlan}</p>
+              </div>
 
-      <div className="min-w-0 rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
-        <p className="text-sm text-zinc-400">WhatsApp da loja</p>
-        <p className="mt-2 break-words text-lg font-bold text-white">{whatsapp}</p>
-      </div>
-    </div>
-  </Card>
-</section>
+              <div className="min-w-0 rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
+                <p className="text-sm text-zinc-400">WhatsApp da loja</p>
+                <p className="mt-2 break-words text-lg font-bold text-white">{whatsapp}</p>
+              </div>
+            </div>
+          </Card>
+        </section>
       </div>
     </AdminShell>
   );
