@@ -46,6 +46,8 @@ type UpgradeModalState = {
   suggestedPlans: string[];
 };
 
+const SALES_WHATSAPP = '5582987227433';
+
 function getHumanPlanName(plan?: string | null) {
   const normalized = String(plan || '').trim().toLowerCase();
 
@@ -60,6 +62,33 @@ function getSuggestedPlans(plan?: string | null) {
   if (normalized === 'pro') return ['Premium'];
   if (normalized === 'premium') return [];
   return ['Pro', 'Premium'];
+}
+
+function openUpgradeWhatsApp(params: {
+  storeName?: string;
+  currentPlan?: string;
+  reason?: string;
+}) {
+  const storeName = String(params.storeName || 'Minha loja').trim();
+  const currentPlan = String(params.currentPlan || 'Simples').trim();
+  const reason = String(params.reason || 'Atingi o limite do meu plano.').trim();
+
+  const message = [
+    'Olá! Tudo bem?',
+    '',
+    'Sou administrador de uma loja na plataforma e gostaria de solicitar um upgrade de plano.',
+    '',
+    `Loja: ${storeName}`,
+    `Plano atual: ${currentPlan}`,
+    `Motivo: ${reason}`,
+    '',
+    'Poderia me enviar as opções disponíveis para upgrade?',
+    '',
+    'Obrigado!',
+  ].join('\n');
+
+  const url = `https://wa.me/${SALES_WHATSAPP}?text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 export function AdminProducts() {
@@ -266,7 +295,23 @@ export function AdminProducts() {
       setEditingCategory(null);
     } catch (error: any) {
       console.error('Erro ao salvar categoria:', error);
-      toast.error(error?.message || 'Não foi possível salvar a categoria.');
+
+      const message = error?.message || 'Não foi possível salvar a categoria.';
+
+      if (
+        String(message).toLowerCase().includes('limite') &&
+        String(message).toLowerCase().includes('categoria')
+      ) {
+        toast.error('Limite de categorias atingido', {
+          description: message,
+        });
+
+        setOpenCategory(false);
+        openUpgradeModalFromError(message);
+        return;
+      }
+
+      toast.error(message);
     } finally {
       setSavingCategory(false);
     }
@@ -511,7 +556,13 @@ export function AdminProducts() {
               type="button"
               variant="outline"
               className="rounded-full border-red-200 text-red-600 hover:bg-red-50"
-              onClick={() => navigate('/super-admin')}
+              onClick={() =>
+                openUpgradeWhatsApp({
+                  storeName: resolvedStore.name,
+                  currentPlan: currentPlanName,
+                  reason: 'Quero conhecer as opções de upgrade para ampliar o catálogo da minha loja.',
+                })
+              }
             >
               Ver planos
             </Button>
@@ -720,7 +771,13 @@ export function AdminProducts() {
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Button
-              onClick={() => navigate('/super-admin')}
+              onClick={() =>
+                openUpgradeWhatsApp({
+                  storeName: resolvedStore.name,
+                  currentPlan: upgradeModal.currentPlan || currentPlanName,
+                  reason: upgradeModal.description || 'Atingi o limite do meu plano e preciso ampliar minha capacidade.',
+                })
+              }
               className="h-11 flex-1 rounded-xl bg-red-500 text-white hover:bg-red-600"
             >
               Fazer upgrade agora
