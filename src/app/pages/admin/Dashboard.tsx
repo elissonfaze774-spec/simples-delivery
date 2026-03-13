@@ -338,7 +338,7 @@ function StoreLinkCard({
 
 function ShortcutsSection({ shortcuts }: { shortcuts: ShortcutItem[] }) {
   return (
-    <div className="grid gap-4 xl:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       {shortcuts.map((item) => (
         <ShortcutCard key={item.label} item={item} />
       ))}
@@ -595,28 +595,34 @@ export function AdminDashboardPage() {
   };
 
   const shortcuts = useMemo<ShortcutItem[]>(
-    () => [
-      {
-        label: 'Produtos',
-        description: 'Criar, editar e organizar itens',
-        icon: Package,
-        onClick: goToProducts,
-      },
-      {
-        label: 'Categorias',
-        description: 'Gerenciar categorias da loja',
-        icon: ShoppingBag,
-        onClick: goToProducts,
-      },
-      {
-        label: 'Cupons',
-        description: 'Criar descontos e campanhas',
-        icon: Tag,
-        onClick: () => goTo('coupons'),
-      },
-    ],
-    [adminBase],
-  );
+  () => [
+    {
+      label: 'Produtos',
+      description: 'Criar, editar e organizar itens',
+      icon: Package,
+      onClick: goToProducts,
+    },
+    {
+      label: 'Categorias',
+      description: 'Gerenciar categorias da loja',
+      icon: ShoppingBag,
+      onClick: goToProducts,
+    },
+    {
+      label: 'Pedidos',
+      description: 'Acompanhar pedidos da loja',
+      icon: TrendingUp,
+      onClick: () => goTo('orders'),
+    },
+    {
+      label: 'Cupons',
+      description: 'Criar descontos e campanhas',
+      icon: Tag,
+      onClick: () => goTo('coupons'),
+    },
+  ],
+  [adminBase]
+);
 
   const visibleProducts = useMemo(() => {
     return storeProducts.filter((product: any) => product?.isActive !== false);

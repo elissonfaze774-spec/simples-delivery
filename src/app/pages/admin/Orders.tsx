@@ -1,4 +1,4 @@
-import { Package, Search, Trash2 } from 'lucide-react';
+import { Package, Search, Trash2, ShoppingBag, CheckSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -55,6 +55,19 @@ function formatMoney(value: number) {
   });
 }
 
+function isToday(dateValue: string) {
+  const date = new Date(dateValue);
+  const now = new Date();
+
+  return (
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear()
+  );
+}
+
+type OrderViewMode = 'all' | 'today';
+
 export function AdminOrders() {
   const navigate = useNavigate();
   const { user, authLoading } = useAuth();
@@ -63,7 +76,9 @@ export function AdminOrders() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [authChecked, setAuthChecked] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingIds, setDeletingIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<OrderViewMode>('all');
 
   useEffect(() => {
     if (authLoading) return;
@@ -96,14 +111,26 @@ export function AdminOrders() {
     [getStoreOrders, resolvedStore]
   );
 
+  const visibleOrders = useMemo(() => {
+    if (viewMode === 'today') {
+      return storeOrders.filter((order) => isToday(order.createdAt));
+    }
+
+    return storeOrders;
+  }, [storeOrders, viewMode]);
+
   const filteredOrders = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
-    if (!query) return storeOrders;
+    if (!query) return visibleOrders;
 
-    return storeOrders.filter((order) =>
+    return visibleOrders.filter((order) =>
       String(order.code || '').toLowerCase().includes(query)
     );
-  }, [searchTerm, storeOrders]);
+  }, [searchTerm, visibleOrders]);
+
+  useEffect(() => {
+    setSelectedIds((prev) => prev.filter((id) => filteredOrders.some((order) => order.id === id)));
+  }, [filteredOrders]);
 
   if (authLoading || !authChecked || !isLoaded) {
     return <div className="p-6 text-white">Carregando pedidos...</div>;
@@ -117,11 +144,37 @@ export function AdminOrders() {
     return <div className="p-6 text-white">Loja não encontrada.</div>;
   }
 
+  const allFilteredSelected =
+    filteredOrders.length > 0 &&
+    filteredOrders.every((order) => selectedIds.includes(order.id));
+
+  const totalTodayOrders = storeOrders.filter((order) => isToday(order.createdAt)).length;
+
+  const toggleSelectOrder = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllFiltered = () => {
+    if (allFilteredSelected) {
+      setSelectedIds((prev) =>
+        prev.filter((id) => !filteredOrders.some((order) => order.id === id))
+      );
+      return;
+    }
+
+    setSelectedIds((prev) => {
+      const merged = new Set([...prev, ...filteredOrders.map((order) => order.id)]);
+      return Array.from(merged);
+    });
+  };
+
   const handleDeleteOrder = async (id: string) => {
     if (!window.confirm('Deseja realmente excluir este pedido?')) return;
 
     try {
-      setDeletingId(id);
+      setDeletingIds([id]);
 
       const { error } = await supabase.from('orders').delete().eq('id', id);
 
@@ -129,13 +182,43 @@ export function AdminOrders() {
         throw error;
       }
 
+      setSelectedIds((prev) => prev.filter((item) => item !== id));
       await refreshOrders();
       toast.success('Pedido excluído com sucesso.');
     } catch (error) {
       console.error('Erro ao excluir pedido:', error);
       toast.error('Não foi possível excluir o pedido.');
     } finally {
-      setDeletingId(null);
+      setDeletingIds([]);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!selectedIds.length) {
+      toast.error('Selecione ao menos um pedido.');
+      return;
+    }
+
+    if (!window.confirm(`Deseja realmente excluir ${selectedIds.length} pedido(s)?`)) return;
+
+    try {
+      setDeletingIds(selectedIds);
+
+      const { error } = await supabase.from('orders').delete().in('id', selectedIds);
+
+      if (error) {
+        throw error;
+      }
+
+      const removedCount = selectedIds.length;
+      setSelectedIds([]);
+      await refreshOrders();
+      toast.success(`${removedCount} pedido(s) excluído(s) com sucesso.`);
+    } catch (error) {
+      console.error('Erro ao excluir pedidos:', error);
+      toast.error('Não foi possível excluir os pedidos selecionados.');
+    } finally {
+      setDeletingIds([]);
     }
   };
 
@@ -157,8 +240,9 @@ export function AdminOrders() {
       stats={[
         { label: 'Total', value: storeOrders.length, helper: 'Pedidos cadastrados' },
         {
-          label: 'Recebidos',
-          value: storeOrders.filter((o) => o.status === 'pending').length,
+          label: 'Pedidos recentes',
+          value: totalTodayOrders,
+          helper: 'Pedidos do dia',
         },
         {
           label: 'Em preparo',
@@ -176,27 +260,100 @@ export function AdminOrders() {
     >
       <div className="space-y-6">
         <Card className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm text-slate-500">Filtro rápido</p>
-              <h2 className="text-2xl font-bold text-slate-900">
-                Busque por código do pedido
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Encontre pedidos com mais rapidez no dia a dia.
-              </p>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-sm text-slate-500">Categoria de pedidos</p>
+                <h2 className="text-2xl font-bold text-slate-900">Gerencie seus pedidos</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Veja todos os pedidos ou apenas os pedidos recentes do dia.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('all')}
+                  className={`rounded-2xl border px-4 py-3 text-left transition ${
+                    viewMode === 'all'
+                      ? 'border-[#EA1D2C] bg-[#EA1D2C] text-white'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <ShoppingBag className="h-4 w-4" />
+                    <span className="font-semibold">Todos os pedidos</span>
+                  </div>
+                  <div className="mt-1 text-sm opacity-90">{storeOrders.length} pedidos</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setViewMode('today')}
+                  className={`rounded-2xl border px-4 py-3 text-left transition ${
+                    viewMode === 'today'
+                      ? 'border-[#EA1D2C] bg-[#EA1D2C] text-white'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    <span className="font-semibold">Pedidos recentes</span>
+                  </div>
+                  <div className="mt-1 text-sm opacity-90">{totalTodayOrders} pedidos do dia</div>
+                </button>
+              </div>
             </div>
 
-            <div className="relative w-full md:max-w-md">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <Input
-                type="text"
-                placeholder="Ex.: #1024"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-12 rounded-full border-slate-200 pl-10"
-              />
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+              <div>
+                <p className="text-sm text-slate-500">Filtro rápido</p>
+                <h3 className="text-xl font-bold text-slate-900">Busque por código do pedido</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Encontre pedidos com mais rapidez no dia a dia.
+                </p>
+              </div>
+
+              <div className="flex w-full flex-col gap-3 md:flex-row xl:max-w-3xl xl:justify-end">
+                <div className="relative w-full md:max-w-md">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    type="text"
+                    placeholder="Ex.: #1024"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="h-12 rounded-full border-slate-200 pl-10"
+                  />
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={toggleSelectAllFiltered}
+                  disabled={!filteredOrders.length}
+                  className="h-12 rounded-full"
+                >
+                  <CheckSquare className="mr-2 h-4 w-4" />
+                  {allFilteredSelected ? 'Desmarcar todos' : 'Selecionar todos'}
+                </Button>
+
+                <Button
+                  type="button"
+                  onClick={handleDeleteSelected}
+                  disabled={!selectedIds.length || deletingIds.length > 0}
+                  className="h-12 rounded-full bg-[#EA1D2C] hover:bg-[#d01929]"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir selecionados
+                </Button>
+              </div>
             </div>
+
+            {selectedIds.length > 0 ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {selectedIds.length} pedido(s) selecionado(s).
+              </div>
+            ) : null}
           </div>
         </Card>
 
@@ -207,6 +364,8 @@ export function AdminOrders() {
             description={
               searchTerm
                 ? 'Tente outro código ou limpe a busca.'
+                : viewMode === 'today'
+                ? 'Ainda não existem pedidos de hoje.'
                 : 'Quando os pedidos entrarem, eles aparecerão aqui para você gerenciar.'
             }
           />
@@ -214,40 +373,59 @@ export function AdminOrders() {
           <div className="space-y-4">
             {filteredOrders.map((order) => {
               const statusInfo = statusMap[order.status] || statusMap.pending;
+              const isSelected = selectedIds.includes(order.id);
+              const isDeleting = deletingIds.includes(order.id);
 
               return (
                 <Card
                   key={order.id}
-                  className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
+                  className={`rounded-3xl border bg-white p-5 shadow-sm transition ${
+                    isSelected ? 'border-[#EA1D2C] ring-2 ring-[#EA1D2C]/15' : 'border-slate-200'
+                  }`}
                 >
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <h3 className="text-xl font-bold text-slate-900">{order.code}</h3>
-                        <Badge className={`border ${statusInfo.className}`}>
-                          {statusInfo.label}
-                        </Badge>
-                      </div>
+                    <div className="flex items-start gap-4">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectOrder(order.id)}
+                        className="mt-1 h-5 w-5 rounded border-slate-300 accent-[#EA1D2C]"
+                      />
 
-                      <p className="mt-2 text-sm text-slate-500">
-                        {new Date(order.createdAt).toLocaleString('pt-BR')}
-                      </p>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <h3 className="text-xl font-bold text-slate-900">{order.code}</h3>
+                          <Badge className={`border ${statusInfo.className}`}>
+                            {statusInfo.label}
+                          </Badge>
+                        </div>
 
-                      <div className="mt-2 text-sm text-slate-600">
-                        <div>
-                          <span className="font-medium">Cliente:</span>{' '}
-                          {order.customerName || 'Cliente'}
-                        </div>
-                        <div>
-                          <span className="font-medium">Telefone:</span>{' '}
-                          {order.customerPhone || 'Não informado'}
-                        </div>
-                        {order.paymentMethod ? (
+                        <p className="mt-2 text-sm text-slate-500">
+                          {new Date(order.createdAt).toLocaleString('pt-BR')}
+                        </p>
+
+                        <div className="mt-2 text-sm text-slate-600">
                           <div>
-                            <span className="font-medium">Pagamento:</span>{' '}
-                            {order.paymentMethod}
+                            <span className="font-medium">Cliente:</span>{' '}
+                            {order.customerName || 'Cliente'}
                           </div>
-                        ) : null}
+                          <div>
+                            <span className="font-medium">Telefone:</span>{' '}
+                            {order.customerPhone || 'Não informado'}
+                          </div>
+                          {order.customerAddress ? (
+                            <div>
+                              <span className="font-medium">Endereço:</span>{' '}
+                              {order.customerAddress}
+                            </div>
+                          ) : null}
+                          {order.paymentMethod ? (
+                            <div>
+                              <span className="font-medium">Pagamento:</span>{' '}
+                              {order.paymentMethod}
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
 
@@ -277,7 +455,7 @@ export function AdminOrders() {
                         size="icon"
                         className="h-11 w-11 rounded-full"
                         onClick={() => handleDeleteOrder(order.id)}
-                        disabled={deletingId === order.id}
+                        disabled={isDeleting || deletingIds.length > 0}
                       >
                         <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>

@@ -117,10 +117,7 @@ function normalizeOrderItems(items: any): OrderItem[] {
         name: String(item?.name ?? item?.product?.name ?? 'Produto'),
         price: Number(item?.price ?? item?.product?.price ?? 0),
         quantity: Math.max(1, Number(item?.quantity ?? 1)),
-        image:
-          item?.image ??
-          item?.product?.image ??
-          undefined,
+        image: item?.image ?? item?.product?.image ?? undefined,
         notes: item?.notes ? String(item.notes) : undefined,
         storeId: item?.storeId
           ? String(item.storeId)
@@ -146,9 +143,8 @@ function normalizeOrderItems(items: any): OrderItem[] {
 }
 
 function generateOrderCode() {
-  const now = Date.now().toString().slice(-6);
-  const random = Math.floor(Math.random() * 900 + 100);
-  return `#${now}${random}`;
+  const code = Math.floor(1000 + Math.random() * 9000);
+  return `#${code}`;
 }
 
 function safeString(value: any) {
