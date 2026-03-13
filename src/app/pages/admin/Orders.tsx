@@ -21,30 +21,36 @@ import { AdminShell } from '../../components/admin/AdminShell';
 import { AdminEmptyState } from '../../components/admin/AdminEmptyState';
 import { toast } from 'sonner';
 
-const statusMap: Record<OrderStatus, { label: string; className: string }> = {
+const statusMap: Record<OrderStatus, { label: string; badgeClass: string; selectClass: string }> = {
   pending: {
     label: 'Recebido',
-    className: 'bg-blue-100 text-blue-700 border-blue-200',
+    badgeClass: 'border-blue-500/30 bg-blue-500/15 text-blue-300',
+    selectClass: 'border-blue-500/25 bg-blue-500/10 text-blue-300',
   },
   confirmed: {
     label: 'Confirmado',
-    className: 'bg-cyan-100 text-cyan-700 border-cyan-200',
+    badgeClass: 'border-cyan-500/30 bg-cyan-500/15 text-cyan-300',
+    selectClass: 'border-cyan-500/25 bg-cyan-500/10 text-cyan-300',
   },
   preparing: {
     label: 'Em preparo',
-    className: 'bg-amber-100 text-amber-700 border-amber-200',
+    badgeClass: 'border-amber-500/30 bg-amber-500/15 text-amber-300',
+    selectClass: 'border-amber-500/25 bg-amber-500/10 text-amber-300',
   },
   delivering: {
     label: 'Saiu para entrega',
-    className: 'bg-violet-100 text-violet-700 border-violet-200',
+    badgeClass: 'border-violet-500/30 bg-violet-500/15 text-violet-300',
+    selectClass: 'border-violet-500/25 bg-violet-500/10 text-violet-300',
   },
   completed: {
     label: 'Concluído',
-    className: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    badgeClass: 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300',
+    selectClass: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300',
   },
   cancelled: {
     label: 'Cancelado',
-    className: 'bg-rose-100 text-rose-700 border-rose-200',
+    badgeClass: 'border-rose-500/30 bg-rose-500/15 text-rose-300',
+    selectClass: 'border-rose-500/25 bg-rose-500/10 text-rose-300',
   },
 };
 
@@ -259,13 +265,13 @@ export function AdminOrders() {
       ]}
     >
       <div className="space-y-6">
-        <Card className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <Card className="rounded-3xl border border-red-950/40 bg-[#0a0a0a] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.30)]">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <p className="text-sm text-slate-500">Categoria de pedidos</p>
-                <h2 className="text-2xl font-bold text-slate-900">Gerencie seus pedidos</h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="text-sm text-zinc-400">Categoria de pedidos</p>
+                <h2 className="text-2xl font-bold text-white">Gerencie seus pedidos</h2>
+                <p className="mt-1 text-sm text-zinc-500">
                   Veja todos os pedidos ou apenas os pedidos recentes do dia.
                 </p>
               </div>
@@ -277,7 +283,7 @@ export function AdminOrders() {
                   className={`rounded-2xl border px-4 py-3 text-left transition ${
                     viewMode === 'all'
                       ? 'border-[#EA1D2C] bg-[#EA1D2C] text-white'
-                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                      : 'border-white/10 bg-[#111111] text-zinc-200 hover:border-white/20'
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -293,7 +299,7 @@ export function AdminOrders() {
                   className={`rounded-2xl border px-4 py-3 text-left transition ${
                     viewMode === 'today'
                       ? 'border-[#EA1D2C] bg-[#EA1D2C] text-white'
-                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                      : 'border-white/10 bg-[#111111] text-zinc-200 hover:border-white/20'
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -307,22 +313,22 @@ export function AdminOrders() {
 
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
-                <p className="text-sm text-slate-500">Filtro rápido</p>
-                <h3 className="text-xl font-bold text-slate-900">Busque por código do pedido</h3>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="text-sm text-zinc-400">Filtro rápido</p>
+                <h3 className="text-xl font-bold text-white">Busque por código do pedido</h3>
+                <p className="mt-1 text-sm text-zinc-500">
                   Encontre pedidos com mais rapidez no dia a dia.
                 </p>
               </div>
 
               <div className="flex w-full flex-col gap-3 md:flex-row xl:max-w-3xl xl:justify-end">
                 <div className="relative w-full md:max-w-md">
-                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                   <Input
                     type="text"
                     placeholder="Ex.: #1024"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-12 rounded-full border-slate-200 pl-10"
+                    className="h-12 rounded-full border-white/10 bg-[#111111] pl-10 text-white placeholder:text-zinc-500"
                   />
                 </div>
 
@@ -331,7 +337,7 @@ export function AdminOrders() {
                   variant="outline"
                   onClick={toggleSelectAllFiltered}
                   disabled={!filteredOrders.length}
-                  className="h-12 rounded-full"
+                  className="h-12 rounded-full border-white/10 bg-[#111111] text-white hover:bg-[#181818]"
                 >
                   <CheckSquare className="mr-2 h-4 w-4" />
                   {allFilteredSelected ? 'Desmarcar todos' : 'Selecionar todos'}
@@ -341,7 +347,7 @@ export function AdminOrders() {
                   type="button"
                   onClick={handleDeleteSelected}
                   disabled={!selectedIds.length || deletingIds.length > 0}
-                  className="h-12 rounded-full bg-[#EA1D2C] hover:bg-[#d01929]"
+                  className="h-12 rounded-full bg-[#EA1D2C] text-white hover:bg-[#d01929]"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Excluir selecionados
@@ -350,7 +356,7 @@ export function AdminOrders() {
             </div>
 
             {selectedIds.length > 0 ? (
-              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
                 {selectedIds.length} pedido(s) selecionado(s).
               </div>
             ) : null}
@@ -379,8 +385,10 @@ export function AdminOrders() {
               return (
                 <Card
                   key={order.id}
-                  className={`rounded-3xl border bg-white p-5 shadow-sm transition ${
-                    isSelected ? 'border-[#EA1D2C] ring-2 ring-[#EA1D2C]/15' : 'border-slate-200'
+                  className={`rounded-3xl border bg-[#0a0a0a] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.25)] transition ${
+                    isSelected
+                      ? 'border-[#EA1D2C] ring-2 ring-[#EA1D2C]/15'
+                      : 'border-red-950/40'
                   }`}
                 >
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -389,39 +397,39 @@ export function AdminOrders() {
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleSelectOrder(order.id)}
-                        className="mt-1 h-5 w-5 rounded border-slate-300 accent-[#EA1D2C]"
+                        className="mt-1 h-5 w-5 rounded border-white/20 bg-[#111111] accent-[#EA1D2C]"
                       />
 
                       <div>
                         <div className="flex flex-wrap items-center gap-3">
-                          <h3 className="text-xl font-bold text-slate-900">{order.code}</h3>
-                          <Badge className={`border ${statusInfo.className}`}>
+                          <h3 className="text-xl font-bold text-white">{order.code}</h3>
+                          <Badge className={`border ${statusInfo.badgeClass}`}>
                             {statusInfo.label}
                           </Badge>
                         </div>
 
-                        <p className="mt-2 text-sm text-slate-500">
+                        <p className="mt-2 text-sm text-zinc-500">
                           {new Date(order.createdAt).toLocaleString('pt-BR')}
                         </p>
 
-                        <div className="mt-2 text-sm text-slate-600">
+                        <div className="mt-2 text-sm text-zinc-400">
                           <div>
-                            <span className="font-medium">Cliente:</span>{' '}
+                            <span className="font-medium text-zinc-300">Cliente:</span>{' '}
                             {order.customerName || 'Cliente'}
                           </div>
                           <div>
-                            <span className="font-medium">Telefone:</span>{' '}
+                            <span className="font-medium text-zinc-300">Telefone:</span>{' '}
                             {order.customerPhone || 'Não informado'}
                           </div>
                           {order.customerAddress ? (
                             <div>
-                              <span className="font-medium">Endereço:</span>{' '}
+                              <span className="font-medium text-zinc-300">Endereço:</span>{' '}
                               {order.customerAddress}
                             </div>
                           ) : null}
                           {order.paymentMethod ? (
                             <div>
-                              <span className="font-medium">Pagamento:</span>{' '}
+                              <span className="font-medium text-zinc-300">Pagamento:</span>{' '}
                               {order.paymentMethod}
                             </div>
                           ) : null}
@@ -436,10 +444,12 @@ export function AdminOrders() {
                           handleStatusChange(order.id, value as OrderStatus)
                         }
                       >
-                        <SelectTrigger className="h-11 w-full min-w-[210px] rounded-full border-slate-200 bg-slate-50 xl:w-[220px]">
+                        <SelectTrigger
+                          className={`h-11 w-full min-w-[220px] rounded-full border xl:w-[240px] ${statusInfo.selectClass}`}
+                        >
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="border-white/10 bg-[#111111] text-white">
                           <SelectItem value="pending">Recebido</SelectItem>
                           <SelectItem value="confirmed">Confirmado</SelectItem>
                           <SelectItem value="preparing">Em preparo</SelectItem>
@@ -453,7 +463,7 @@ export function AdminOrders() {
                         type="button"
                         variant="outline"
                         size="icon"
-                        className="h-11 w-11 rounded-full"
+                        className="h-11 w-11 rounded-full border-white/10 bg-[#111111] hover:bg-[#181818]"
                         onClick={() => handleDeleteOrder(order.id)}
                         disabled={isDeleting || deletingIds.length > 0}
                       >
@@ -463,9 +473,9 @@ export function AdminOrders() {
                   </div>
 
                   <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_240px]">
-                    <div className="space-y-3 rounded-3xl bg-slate-50 p-4">
+                    <div className="space-y-3 rounded-3xl border border-white/8 bg-[#111111] p-4">
                       {(order.items || []).length === 0 ? (
-                        <div className="text-sm text-slate-500">
+                        <div className="text-sm text-zinc-500">
                           Nenhum item encontrado neste pedido.
                         </div>
                       ) : (
@@ -474,10 +484,10 @@ export function AdminOrders() {
                             key={`${order.id}-${index}`}
                             className="flex items-center justify-between gap-3 text-sm"
                           >
-                            <span className="text-slate-700">
+                            <span className="text-zinc-300">
                               {item.quantity}x {item.name}
                             </span>
-                            <span className="font-semibold text-slate-900">
+                            <span className="font-semibold text-white">
                               {formatMoney(Number(item.price || 0) * Number(item.quantity || 0))}
                             </span>
                           </div>
@@ -485,16 +495,16 @@ export function AdminOrders() {
                       )}
                     </div>
 
-                    <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                      <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                    <div className="rounded-3xl border border-white/8 bg-[#111111] p-4">
+                      <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">
                         Resumo
                       </p>
 
-                      <p className="mt-3 text-3xl font-bold text-slate-900">
+                      <p className="mt-3 text-3xl font-bold text-white">
                         {formatMoney(Number(order.total || 0))}
                       </p>
 
-                      <p className="mt-2 text-sm text-slate-500">
+                      <p className="mt-2 text-sm text-zinc-500">
                         {(order.items || []).reduce(
                           (sum, item) => sum + Number(item.quantity || 0),
                           0
@@ -502,18 +512,18 @@ export function AdminOrders() {
                         itens no pedido
                       </p>
 
-                      <div className="mt-4 space-y-2 border-t pt-4 text-sm">
-                        <div className="flex items-center justify-between text-slate-600">
+                      <div className="mt-4 space-y-2 border-t border-white/8 pt-4 text-sm">
+                        <div className="flex items-center justify-between text-zinc-400">
                           <span>Subtotal</span>
                           <span>{formatMoney(Number(order.subtotal || 0))}</span>
                         </div>
 
-                        <div className="flex items-center justify-between text-slate-600">
+                        <div className="flex items-center justify-between text-zinc-400">
                           <span>Desconto</span>
                           <span>- {formatMoney(Number(order.discount || 0))}</span>
                         </div>
 
-                        <div className="flex items-center justify-between text-slate-600">
+                        <div className="flex items-center justify-between text-zinc-400">
                           <span>Entrega</span>
                           <span>{formatMoney(Number(order.deliveryFee || 0))}</span>
                         </div>
