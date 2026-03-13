@@ -4,7 +4,7 @@ import { Home } from './pages/Home';
 import { Cart } from './pages/Cart';
 import { Orders } from './pages/Orders';
 import { Login } from './pages/Login';
-import { AdminDashboard } from './pages/admin/Dashboard';
+import { AdminDashboardPage } from './pages/admin/Dashboard';
 import { AdminOrders } from './pages/admin/Orders';
 import { AdminProducts } from './pages/admin/Products';
 import { AdminSettings } from './pages/admin/Settings';
@@ -41,7 +41,7 @@ export const router = createBrowserRouter([
     path: '/admin',
     element: (
       <ProtectedRoute allowedRoles={['admin']}>
-        <AdminDashboard />
+        <AdminDashboardPage />
       </ProtectedRoute>
     ),
   },
