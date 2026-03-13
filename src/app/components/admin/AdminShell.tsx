@@ -18,6 +18,7 @@ type AdminShellProps = {
   actions?: ReactNode;
   children: ReactNode;
   showBackButton?: boolean;
+  hideStatsOnMobile?: boolean;
 };
 
 function shouldShowBackButton(pathname: string) {
@@ -45,6 +46,7 @@ export function AdminShell({
   actions,
   children,
   showBackButton,
+  hideStatsOnMobile = false,
 }: AdminShellProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -67,10 +69,6 @@ export function AdminShell({
           color: #ffffff;
         }
 
-        .admin-shell * {
-          scrollbar-color: rgba(243, 22, 45, 0.35) #0b0b0b;
-        }
-
         .admin-shell h1,
         .admin-shell h2,
         .admin-shell h3,
@@ -85,63 +83,6 @@ export function AdminShell({
           border: 1px solid rgba(127, 29, 29, 0.45) !important;
           color: #ffffff !important;
           box-shadow: 0 18px 45px rgba(0, 0, 0, 0.30) !important;
-        }
-
-        .admin-shell :is(div, section, article, aside, form, main)[class*="bg-white"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="bg-zinc-50"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="bg-zinc-100"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="bg-neutral-50"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="bg-neutral-100"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="bg-slate-50"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="bg-slate-100"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="bg-gray-50"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="bg-gray-100"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="bg-stone-50"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="bg-stone-100"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="bg-blue-"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="bg-sky-"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="bg-indigo-"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="from-blue-"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="to-blue-"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="from-sky-"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="to-sky-"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="from-indigo-"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="to-indigo-"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="from-cyan-"],
-        .admin-shell :is(div, section, article, aside, form, main)[class*="to-cyan-"] {
-          background: linear-gradient(180deg, rgba(14, 14, 14, 0.98), rgba(8, 8, 8, 0.98)) !important;
-          background-color: #0b0b0b !important;
-          background-image: none !important;
-          color: #ffffff !important;
-          border-color: rgba(127, 29, 29, 0.45) !important;
-          box-shadow: 0 18px 45px rgba(0, 0, 0, 0.30) !important;
-        }
-
-        .admin-shell [class*="text-black"],
-        .admin-shell [class*="text-zinc-900"],
-        .admin-shell [class*="text-zinc-950"],
-        .admin-shell [class*="text-neutral-900"],
-        .admin-shell [class*="text-neutral-950"],
-        .admin-shell [class*="text-slate-900"],
-        .admin-shell [class*="text-slate-950"],
-        .admin-shell [class*="text-gray-900"],
-        .admin-shell [class*="text-gray-950"] {
-          color: #ffffff !important;
-        }
-
-        .admin-shell [class*="text-zinc-500"],
-        .admin-shell [class*="text-zinc-600"],
-        .admin-shell [class*="text-zinc-700"],
-        .admin-shell [class*="text-neutral-500"],
-        .admin-shell [class*="text-neutral-600"],
-        .admin-shell [class*="text-neutral-700"],
-        .admin-shell [class*="text-slate-500"],
-        .admin-shell [class*="text-slate-600"],
-        .admin-shell [class*="text-slate-700"],
-        .admin-shell [class*="text-gray-500"],
-        .admin-shell [class*="text-gray-600"],
-        .admin-shell [class*="text-gray-700"] {
-          color: #b3b3b3 !important;
         }
 
         .admin-shell input:not([type="checkbox"]):not([type="radio"]),
@@ -164,29 +105,6 @@ export function AdminShell({
           outline: none !important;
           border-color: rgba(243, 22, 45, 0.45) !important;
           box-shadow: 0 0 0 3px rgba(243, 22, 45, 0.12) !important;
-        }
-
-        .admin-shell button[class*="border-zinc"],
-        .admin-shell a[class*="border-zinc"] {
-          border-color: rgba(255, 255, 255, 0.10) !important;
-        }
-
-        .admin-shell [role="tablist"] {
-          background: rgba(255, 255, 255, 0.05) !important;
-          border: 1px solid rgba(255, 255, 255, 0.08) !important;
-          border-radius: 999px !important;
-          padding: 4px !important;
-        }
-
-        .admin-shell [role="tab"] {
-          color: rgba(255, 255, 255, 0.70) !important;
-          border-radius: 999px !important;
-        }
-
-        .admin-shell [role="tab"][data-state="active"] {
-          background: rgba(255, 255, 255, 0.10) !important;
-          color: #ffffff !important;
-          box-shadow: none !important;
         }
 
         .admin-shell svg {
@@ -230,7 +148,11 @@ export function AdminShell({
           </div>
 
           {stats.length > 0 ? (
-            <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div
+              className={`mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4 ${
+                hideStatsOnMobile ? 'hidden lg:grid' : ''
+              }`}
+            >
               {stats.map((stat) => {
                 const labelLower = stat.label.toLowerCase();
 
@@ -270,3 +192,5 @@ export function AdminShell({
     </div>
   );
 }
+
+export default AdminShell;

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -464,6 +464,18 @@ export function AdminDashboardPage() {
   const { stores, getStoreByAdminEmail, getStoreProducts, getStoreCategories, getStoreCoupons } =
     useStore();
   const { orders = [] } = useOrders();
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkScreen = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+
+    checkScreen();
+    window.addEventListener('resize', checkScreen);
+
+    return () => window.removeEventListener('resize', checkScreen);
+  }, []);
 
   const adminBase = useMemo(() => resolveAdminBase(location.pathname), [location.pathname]);
 
@@ -610,6 +622,29 @@ export function AdminDashboardPage() {
     return storeProducts.filter((product: any) => product?.isActive !== false);
   }, [storeProducts]);
 
+  const topStats = [
+    {
+      label: 'Produtos',
+      value: visibleProducts.length,
+      helper: 'Catálogo cadastrado',
+    },
+    {
+      label: 'Categorias',
+      value: storeCategories.length,
+      helper: 'Organização do cardápio',
+    },
+    {
+      label: 'Pedidos',
+      value: monthMetrics.count,
+      helper: 'Movimento total',
+    },
+    {
+      label: 'Receita',
+      value: formatMoney(totalRevenue),
+      helper: 'Total acumulado',
+    },
+  ];
+
   if (!store) {
     return (
       <AdminShell title="Dashboard" subtitle="Sua loja ainda não foi encontrada.">
@@ -634,28 +669,7 @@ export function AdminDashboardPage() {
           Ver loja
         </Button>
       }
-      stats={[
-        {
-          label: 'Produtos',
-          value: visibleProducts.length,
-          helper: 'Catálogo cadastrado',
-        },
-        {
-          label: 'Categorias',
-          value: storeCategories.length,
-          helper: 'Organização do cardápio',
-        },
-        {
-          label: 'Pedidos',
-          value: monthMetrics.count,
-          helper: 'Movimento total',
-        },
-        {
-          label: 'Receita',
-          value: formatMoney(totalRevenue),
-          helper: 'Total acumulado',
-        },
-      ]}
+      stats={isMobile ? [] : topStats}
     >
       <div className="hidden lg:grid lg:grid-cols-12 lg:gap-6">
         <div className="lg:col-span-8">
@@ -709,6 +723,34 @@ export function AdminDashboardPage() {
           monthTotal={monthMetrics.total}
           ticketAverage={monthMetrics.ticketAverage}
         />
+
+        <div className="grid gap-4">
+          <SummaryCard
+            icon={Package}
+            label="Produtos"
+            value={String(visibleProducts.length)}
+            helper="Catálogo cadastrado"
+          />
+          <SummaryCard
+            icon={ShoppingBag}
+            label="Categorias"
+            value={String(storeCategories.length)}
+            helper="Organização do cardápio"
+          />
+          <SummaryCard
+            icon={TrendingUp}
+            label="Pedidos"
+            value={String(monthMetrics.count)}
+            helper="Movimento total"
+          />
+          <SummaryCard
+            icon={Wallet}
+            label="Receita"
+            value={formatMoney(totalRevenue)}
+            helper="Total acumulado"
+            money
+          />
+        </div>
 
         <StoreLinkCard
           storeUrl={storeUrl}
