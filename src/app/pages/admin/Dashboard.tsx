@@ -347,6 +347,14 @@ export function AdminDashboard() {
   const storeSlug = String(resolvedStore.slug || resolvedStore.id || '').trim();
   const absoluteStoreUrl = getStoreUrl(storeSlug);
 
+  const handleBackToStore = () => {
+    window.location.assign(absoluteStoreUrl);
+  };
+
+  const handleOpenStore = () => {
+    window.open(absoluteStoreUrl, '_blank', 'noopener,noreferrer');
+  };
+
   const shortcuts: ShortcutItem[] = [
     {
       label: 'Produtos',
@@ -379,6 +387,7 @@ export function AdminDashboard() {
       title="Dashboard"
       subtitle={`Loja ${resolvedStore.name}`}
       storeName={resolvedStore.name}
+      onBack={handleBackToStore}
       stats={[
         { label: 'Produtos', value: products.length, helper: 'Catálogo cadastrado' },
         { label: 'Categorias', value: categories.length, helper: 'Organização do cardápio' },
@@ -388,7 +397,7 @@ export function AdminDashboard() {
       actions={
         <Button
           type="button"
-          onClick={() => window.open(absoluteStoreUrl, '_blank', 'noopener,noreferrer')}
+          onClick={handleOpenStore}
           className="w-full rounded-full border-0 bg-[#f3162d] px-5 text-white shadow-[0_8px_24px_rgba(243,22,45,0.35)] transition hover:bg-[#d90f24] sm:w-auto"
         >
           <ExternalLink className="mr-2 h-4 w-4" />
@@ -478,7 +487,7 @@ export function AdminDashboard() {
               <Button
                 type="button"
                 className="w-full rounded-full border-0 bg-[#f3162d] text-white shadow-[0_8px_24px_rgba(243,22,45,0.35)] transition hover:bg-[#d90f24]"
-                onClick={() => window.location.assign(absoluteStoreUrl)}
+                onClick={handleBackToStore}
               >
                 Abrir nesta aba
               </Button>

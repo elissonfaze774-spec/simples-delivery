@@ -20,6 +20,7 @@ type AdminShellProps = {
   stats?: Array<{ label: string; value: string | number; helper?: string }>;
   actions?: ReactNode;
   children: ReactNode;
+  onBack?: () => void;
 };
 
 const navItems = [
@@ -37,6 +38,7 @@ export function AdminShell({
   stats,
   actions,
   children,
+  onBack,
 }: AdminShellProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -44,6 +46,15 @@ export function AdminShell({
   const isActivePath = (path: string) => {
     if (path === '/admin') return location.pathname === '/admin';
     return location.pathname.startsWith(path);
+  };
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
+
+    navigate('/admin');
   };
 
   return (
@@ -56,8 +67,9 @@ export function AdminShell({
                 type="button"
                 variant="outline"
                 size="icon"
-                onClick={() => navigate('/admin')}
+                onClick={handleBack}
                 className="h-11 w-11 shrink-0 rounded-full border-zinc-800 bg-[#111111] text-white hover:border-red-500/40 hover:bg-[#171717]"
+                aria-label="Voltar"
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
