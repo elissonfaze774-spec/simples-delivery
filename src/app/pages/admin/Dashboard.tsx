@@ -1,9 +1,6 @@
 import {
   ArrowUpRight,
-  Clock3,
   ExternalLink,
-  Eye,
-  Package,
   Settings,
   ShoppingBag,
   Store as StoreIcon,
@@ -26,13 +23,6 @@ type DailyChartItem = {
   label: string;
   total: number;
   orders: number;
-};
-
-type ShortcutItem = {
-  label: string;
-  description: string;
-  icon: LucideIcon;
-  onClick: () => void;
 };
 
 function formatMoney(value: number) {
@@ -65,7 +55,7 @@ function SimpleBarChart({ data }: { data: DailyChartItem[] }) {
     <div className="rounded-[24px] border border-red-950/40 bg-[#101010] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:rounded-[28px] sm:p-5">
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-red-300/80 sm:text-xs">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#f3162d] sm:text-xs">
             Desempenho diário
           </p>
           <h3 className="mt-2 text-lg font-bold text-white sm:text-xl">
@@ -73,7 +63,7 @@ function SimpleBarChart({ data }: { data: DailyChartItem[] }) {
           </h3>
         </div>
 
-        <div className="w-fit rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 text-[11px] font-semibold text-red-300 sm:text-xs">
+        <div className="w-fit rounded-full border border-[#f3162d]/30 bg-[#f3162d]/10 px-3 py-1 text-[11px] font-semibold text-[#f3162d] sm:text-xs">
           Vendas da semana
         </div>
       </div>
@@ -217,12 +207,6 @@ export function AdminDashboard() {
     [orders]
   );
 
-  const latestOrders = useMemo(() => {
-    return [...orders]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 5);
-  }, [orders]);
-
   const averageTicket = useMemo(() => {
     return orders.length ? totalRevenue / orders.length : 0;
   }, [orders.length, totalRevenue]);
@@ -355,37 +339,10 @@ export function AdminDashboard() {
     window.open(absoluteStoreUrl, '_blank', 'noopener,noreferrer');
   };
 
-  const shortcuts: ShortcutItem[] = [
-    {
-      label: 'Produtos',
-      description: 'Cadastre, edite e organize seu catálogo.',
-      icon: ShoppingBag,
-      onClick: () => navigate('/admin/products'),
-    },
-    {
-      label: 'Pedidos',
-      description: 'Veja pedidos novos e acompanhe o andamento.',
-      icon: Package,
-      onClick: () => navigate('/admin/orders'),
-    },
-    {
-      label: 'Cupons',
-      description: 'Crie ofertas para vender mais todos os dias.',
-      icon: Tag,
-      onClick: () => navigate('/admin/coupons'),
-    },
-    {
-      label: 'Configurações',
-      description: 'Ajuste loja, WhatsApp, banner e aparência.',
-      icon: Settings,
-      onClick: () => navigate('/admin/settings'),
-    },
-  ];
-
   return (
     <AdminShell
       title="Dashboard"
-      subtitle=""
+      subtitle={resolvedStore.name}
       storeName={resolvedStore.name}
       onBack={handleBackToStore}
       stats={[
@@ -410,7 +367,7 @@ export function AdminDashboard() {
           <Card className="overflow-hidden rounded-[24px] border border-red-950/40 bg-gradient-to-br from-[#160507] via-[#0b0b0b] to-[#111111] p-0 shadow-[0_20px_60px_rgba(0,0,0,0.45)] sm:rounded-[32px]">
             <div className="p-5 sm:p-7">
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                <div className="inline-flex w-fit items-center gap-2 rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-red-300 sm:text-xs">
+                <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#f3162d]/35 bg-[#f3162d]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f3162d] sm:text-xs">
                   <StoreIcon className="h-3.5 w-3.5" />
                   PAINEL COMPLETO DA LOJA
                 </div>
@@ -464,16 +421,8 @@ export function AdminDashboard() {
           </Card>
 
           <Card className="rounded-[24px] border border-red-950/40 bg-[#101010] p-5 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:rounded-[32px] sm:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm text-zinc-400">Sua loja online</p>
-                <h3 className="mt-1 text-xl font-black text-white sm:text-2xl">
-                  Link da vitrine
-                </h3>
-              </div>
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-300 sm:h-12 sm:w-12">
-                <Eye className="h-5 w-5" />
-              </div>
+            <div className="min-w-0">
+              <h3 className="text-xl font-black uppercase text-white sm:text-2xl">LINK DA LOJA</h3>
             </div>
 
             <div className="mt-5 rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
@@ -541,7 +490,7 @@ export function AdminDashboard() {
           <Card className="rounded-[24px] border border-red-950/40 bg-[#101010] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:rounded-[28px] sm:p-5">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-red-300/80 sm:text-xs">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#f3162d] sm:text-xs">
                   Resumo mensal
                 </p>
                 <h3 className="mt-2 text-lg font-bold text-white sm:text-xl">
@@ -549,7 +498,7 @@ export function AdminDashboard() {
                 </h3>
               </div>
 
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-300">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#f3162d]/30 bg-[#f3162d]/10 text-[#f3162d]">
                 <ArrowUpRight className="h-5 w-5" />
               </div>
             </div>
@@ -586,96 +535,6 @@ export function AdminDashboard() {
                 <p className="mt-2 break-words text-lg font-bold text-white">{whatsapp}</p>
               </div>
             </div>
-          </Card>
-        </section>
-
-        <section className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
-          <Card className="rounded-[24px] border border-red-950/40 bg-[#101010] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:rounded-[28px] sm:p-5">
-            <div className="mb-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-red-300/80 sm:text-xs">
-                Ações rápidas
-              </p>
-              <h3 className="mt-2 text-lg font-bold text-white sm:text-xl">
-                Gerencie sua loja mais rápido
-              </h3>
-            </div>
-
-            <div className="grid gap-3">
-              {shortcuts.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={item.onClick}
-                    className="flex items-center gap-3 rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4 text-left transition hover:border-red-500/30 hover:bg-[#151515] sm:gap-4"
-                  >
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-300 sm:h-12 sm:w-12">
-                      <Icon className="h-5 w-5" />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-white">{item.label}</div>
-                      <div className="text-sm text-zinc-400">{item.description}</div>
-                    </div>
-
-                    <ArrowUpRight className="h-4 w-4 shrink-0 text-zinc-500" />
-                  </button>
-                );
-              })}
-            </div>
-          </Card>
-
-          <Card className="rounded-[24px] border border-red-950/40 bg-[#101010] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:rounded-[28px] sm:p-5">
-            <div className="mb-5 flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-red-300/80 sm:text-xs">
-                  Pedidos recentes
-                </p>
-                <h3 className="mt-2 text-lg font-bold text-white sm:text-xl">
-                  Últimos movimentos da loja
-                </h3>
-              </div>
-
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-300">
-                <Clock3 className="h-5 w-5" />
-              </div>
-            </div>
-
-            {latestOrders.length === 0 ? (
-              <div className="rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-8 text-center text-sm text-zinc-400 sm:p-10">
-                Ainda não há pedidos registrados.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {latestOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4 transition hover:bg-[#151515]"
-                  >
-                    <div className="flex flex-col gap-3">
-                      <div className="min-w-0">
-                        <div className="text-base font-black text-white">{order.code}</div>
-                        <div className="mt-1 text-sm text-zinc-400">
-                          {new Date(order.createdAt).toLocaleString('pt-BR')}
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="text-sm text-zinc-400">
-                          {order.items.reduce((sum, item) => sum + item.quantity, 0)} itens
-                        </div>
-
-                        <div className="text-xl font-black text-emerald-400">
-                          {formatMoney(Number(order.total || 0))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </Card>
         </section>
       </div>
