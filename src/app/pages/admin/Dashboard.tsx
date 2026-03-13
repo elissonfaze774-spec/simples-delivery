@@ -52,7 +52,7 @@ function SimpleBarChart({ data }: { data: DailyChartItem[] }) {
   const maxValue = Math.max(...data.map((item) => item.total), 1);
 
   return (
-    <div className="rounded-[24px] border border-red-950/40 bg-[#101010] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:rounded-[28px] sm:p-5">
+    <div className="mx-auto w-full min-w-0 max-w-full overflow-hidden rounded-[24px] border border-red-950/40 bg-[#101010] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:rounded-[28px] sm:p-5">
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#f3162d] sm:text-xs">
@@ -68,13 +68,16 @@ function SimpleBarChart({ data }: { data: DailyChartItem[] }) {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <div className="flex min-w-[560px] items-end gap-3 pb-2">
+      <div className="w-full max-w-full overflow-x-auto overflow-y-hidden">
+        <div className="mx-auto flex min-w-[540px] items-end gap-3 pb-2 sm:min-w-0 sm:justify-between">
           {data.map((item) => {
             const height = Math.max((item.total / maxValue) * 100, item.total > 0 ? 10 : 4);
 
             return (
-              <div key={item.label} className="flex flex-1 flex-col items-center gap-2 sm:gap-3">
+              <div
+                key={item.label}
+                className="flex min-w-[60px] flex-1 flex-col items-center gap-2 sm:gap-3"
+              >
                 <div className="text-center">
                   <div className="text-[10px] font-semibold text-emerald-300 sm:text-[11px]">
                     {item.total > 0 ? formatMoney(item.total) : 'R$ 0,00'}
@@ -362,7 +365,7 @@ export function AdminDashboard() {
         </Button>
       }
     >
-      <div className="space-y-4 text-white sm:space-y-6">
+      <div className="min-w-0 space-y-4 overflow-x-hidden text-white sm:space-y-6">
         <section className="grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
           <Card className="overflow-hidden rounded-[24px] border border-red-950/40 bg-gradient-to-br from-[#160507] via-[#0b0b0b] to-[#111111] p-0 shadow-[0_20px_60px_rgba(0,0,0,0.45)] sm:rounded-[32px]">
             <div className="p-5 sm:p-7">
@@ -484,59 +487,59 @@ export function AdminDashboard() {
           />
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-          <SimpleBarChart data={last7DaysData} />
+        <section className="grid min-w-0 gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+  <div className="mx-auto w-full min-w-0 max-w-full">
+    <SimpleBarChart data={last7DaysData} />
+  </div>
 
-          <Card className="rounded-[24px] border border-red-950/40 bg-[#101010] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:rounded-[28px] sm:p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#f3162d] sm:text-xs">
-                  Resumo mensal
-                </p>
-                <h3 className="mt-2 text-lg font-bold text-white sm:text-xl">
-                  Sua loja este mês
-                </h3>
-              </div>
+  <Card className="mx-auto w-full min-w-0 max-w-full overflow-hidden rounded-[24px] border border-red-950/40 bg-[#101010] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:rounded-[28px] sm:p-5">
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#f3162d] sm:text-xs">
+          Resumo mensal
+        </p>
+        <h3 className="mt-2 text-lg font-bold text-white sm:text-xl">Sua loja este mês</h3>
+      </div>
 
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#f3162d]/30 bg-[#f3162d]/10 text-[#f3162d]">
-                <ArrowUpRight className="h-5 w-5" />
-              </div>
-            </div>
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#f3162d]/30 bg-[#f3162d]/10 text-[#f3162d]">
+        <ArrowUpRight className="h-5 w-5" />
+      </div>
+    </div>
 
-            <div className="mt-6 space-y-4">
-              <div className="rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
-                <p className="text-sm text-zinc-400">Faturamento mensal</p>
-                <p className="mt-2 break-words text-2xl font-black text-emerald-400 sm:text-3xl">
-                  {formatMoney(monthRevenue)}
-                </p>
-              </div>
+    <div className="mt-6 space-y-4">
+      <div className="rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
+        <p className="text-sm text-zinc-400">Faturamento mensal</p>
+        <p className="mt-2 break-words text-2xl font-black text-emerald-400 sm:text-3xl">
+          {formatMoney(monthRevenue)}
+        </p>
+      </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
-                  <p className="text-sm text-zinc-400">Pedidos do mês</p>
-                  <p className="mt-2 text-2xl font-black text-white">{monthOrders}</p>
-                </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="min-w-0 rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
+          <p className="text-sm text-zinc-400">Pedidos do mês</p>
+          <p className="mt-2 break-words text-2xl font-black text-white">{monthOrders}</p>
+        </div>
 
-                <div className="rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
-                  <p className="text-sm text-zinc-400">Ticket médio</p>
-                  <p className="mt-2 break-words text-2xl font-black text-emerald-400">
-                    {formatMoney(averageTicket)}
-                  </p>
-                </div>
-              </div>
+        <div className="min-w-0 rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
+          <p className="text-sm text-zinc-400">Ticket médio</p>
+          <p className="mt-2 break-words text-2xl font-black text-emerald-400">
+            {formatMoney(averageTicket)}
+          </p>
+        </div>
+      </div>
 
-              <div className="rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
-                <p className="text-sm text-zinc-400">Plano atual</p>
-                <p className="mt-2 text-lg font-bold capitalize text-white">{currentPlan}</p>
-              </div>
+      <div className="min-w-0 rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
+        <p className="text-sm text-zinc-400">Plano atual</p>
+        <p className="mt-2 break-words text-lg font-bold capitalize text-white">{currentPlan}</p>
+      </div>
 
-              <div className="rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
-                <p className="text-sm text-zinc-400">WhatsApp da loja</p>
-                <p className="mt-2 break-words text-lg font-bold text-white">{whatsapp}</p>
-              </div>
-            </div>
-          </Card>
-        </section>
+      <div className="min-w-0 rounded-3xl border border-zinc-800 bg-[#0b0b0b] p-4">
+        <p className="text-sm text-zinc-400">WhatsApp da loja</p>
+        <p className="mt-2 break-words text-lg font-bold text-white">{whatsapp}</p>
+      </div>
+    </div>
+  </Card>
+</section>
       </div>
     </AdminShell>
   );
