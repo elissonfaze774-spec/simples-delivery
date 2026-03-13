@@ -1,6 +1,6 @@
-import { ArrowLeft, Trash2, Minus, Plus, Tag } from 'lucide-react';
+import { ArrowLeft, Trash2, Minus, Plus, Tag, MapPin, Phone, User } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { useOrders } from '../contexts/OrderContext';
 import { useStore } from '../contexts/StoreContext';
@@ -37,21 +37,33 @@ function buildWhatsAppMessage(order: any, storeName: string, couponCode?: string
     `Olá, ${storeName}`,
     `Pedido ${order.code}`,
     ``,
+    `Cliente: ${String(order.customerName || 'Não informado')}`,
+    `WhatsApp: ${String(order.customerPhone || 'Não informado')}`,
+    `Endereço: ${String(order.customerAddress || 'Não informado')}`,
+  ];
+
+  if (String(order.customerReference || '').trim()) {
+    lines.push(`Referência: ${String(order.customerReference)}`);
+  }
+
+  if (String(order.customerNotes || '').trim()) {
+    lines.push(`Observações: ${String(order.customerNotes)}`);
+  }
+
+  lines.push(
+    ``,
     `Itens do pedido:`,
     itemsText || 'Sem itens',
     ``,
     `Valores:`,
-    `Subtotal: ${formatMoney(Number(order.subtotal || 0))}`,
-  ];
+    `Subtotal: ${formatMoney(Number(order.subtotal || 0))}`
+  );
 
   if (Number(order.discount || 0) > 0 && couponCode) {
     lines.push(`${couponCode}: -${formatMoney(Number(order.discount || 0))}`);
   }
 
-  if (Number(order.deliveryFee || 0) > 0) {
-    lines.push(`Entrega: ${formatMoney(Number(order.deliveryFee || 0))}`);
-  }
-
+  lines.push(`Entrega: ${formatMoney(Number(order.deliveryFee || 0))}`);
   lines.push(`Total: ${formatMoney(Number(order.total || 0))}`);
 
   return lines.join('\n');
@@ -70,6 +82,39 @@ export function Cart() {
     null
   );
   const [submitting, setSubmitting] = useState(false);
+
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
+  const [customerReference, setCustomerReference] = useState('');
+  const [customerNotes, setCustomerNotes] = useState('');
+
+  useEffect(() => {
+    try {
+      setFirstName(localStorage.getItem('checkout:firstName') || '');
+      setLastName(localStorage.getItem('checkout:lastName') || '');
+      setCustomerPhone(localStorage.getItem('checkout:phone') || '');
+      setCustomerAddress(localStorage.getItem('checkout:address') || '');
+      setCustomerReference(localStorage.getItem('checkout:reference') || '');
+      setCustomerNotes(localStorage.getItem('checkout:notes') || '');
+    } catch {
+      //
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('checkout:firstName', firstName);
+      localStorage.setItem('checkout:lastName', lastName);
+      localStorage.setItem('checkout:phone', customerPhone);
+      localStorage.setItem('checkout:address', customerAddress);
+      localStorage.setItem('checkout:reference', customerReference);
+      localStorage.setItem('checkout:notes', customerNotes);
+    } catch {
+      //
+    }
+  }, [firstName, lastName, customerPhone, customerAddress, customerReference, customerNotes]);
 
   const storeIdFromQuery = searchParams.get('store');
   const slugFromQuery = searchParams.get('slug');
@@ -153,7 +198,7 @@ export function Cart() {
 
   const subtotal = Number(total || 0);
   const discount = appliedCoupon ? (subtotal * appliedCoupon.discount) / 100 : 0;
-  const deliveryFee = 0;
+  const deliveryFee = Math.max(Number((store as any)?.deliveryFee || 0), 0);
   const finalTotal = Math.max(subtotal - discount + deliveryFee, 0);
 
   const handleConfirmOrder = async () => {
@@ -168,6 +213,35 @@ export function Cart() {
       toast.error('Loja não encontrada');
       return;
     }
+
+    const trimmedFirstName = String(firstName || '').trim();
+    const trimmedLastName = String(lastName || '').trim();
+    const trimmedPhone = onlyDigits(customerPhone);
+    const trimmedAddress = String(customerAddress || '').trim();
+    const trimmedReference = String(customerReference || '').trim();
+    const trimmedNotes = String(customerNotes || '').trim();
+
+    if (!trimmedFirstName) {
+      toast.error('Informe o nome');
+      return;
+    }
+
+    if (!trimmedLastName) {
+      toast.error('Informe o sobrenome');
+      return;
+    }
+
+    if (trimmedPhone.length < 10) {
+      toast.error('Informe um WhatsApp válido');
+      return;
+    }
+
+    if (!trimmedAddress) {
+      toast.error('Informe o endereço');
+      return;
+    }
+
+    const customerFullName = `${trimmedFirstName} ${trimmedLastName}`.trim();
 
     const rawWhatsapp =
       (store as any)?.whatsapp ||
@@ -188,11 +262,15 @@ export function Cart() {
     try {
       const createdOrder = await createOrder({
         storeId: String(storeId),
-        customerName: 'Cliente',
-        customerPhone: 'Não informado',
-        customerAddress: 'Não informado',
-        customerReference: '',
-        customerNotes: appliedCoupon ? `Cupom aplicado: ${appliedCoupon.code}` : '',
+        customerName: customerFullName,
+        customerPhone: trimmedPhone,
+        customerAddress: trimmedAddress,
+        customerReference: trimmedReference,
+        customerNotes: trimmedNotes
+          ? trimmedNotes
+          : appliedCoupon
+          ? `Cupom aplicado: ${appliedCoupon.code}`
+          : '',
         paymentMethod: 'whatsapp',
         items: items.map((item: any) => ({
           id: String(item?.product?.id || item?.id || ''),
@@ -202,9 +280,7 @@ export function Cart() {
           quantity: Number(item?.quantity || 1),
           image: String(item?.product?.image || item?.image || ''),
           notes: String(item?.notes || ''),
-          storeId: String(
-            item?.product?.storeId || item?.storeId || storeId || ''
-          ),
+          storeId: String(item?.product?.storeId || item?.storeId || storeId || ''),
           categoryId: item?.product?.categoryId
             ? String(item.product.categoryId)
             : undefined,
@@ -347,9 +423,7 @@ export function Cart() {
                               <Minus className="h-4 w-4" />
                             </Button>
 
-                            <span className="w-8 text-center font-medium">
-                              {itemQuantity}
-                            </span>
+                            <span className="w-8 text-center font-medium">{itemQuantity}</span>
 
                             <Button
                               variant="ghost"
@@ -380,6 +454,87 @@ export function Cart() {
                   </div>
                 );
               })}
+            </div>
+
+            <div className="mb-4 rounded-lg bg-white p-4 shadow-sm">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Dados do cliente</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Preencha seus dados antes de confirmar o pedido.
+                </p>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <User className="h-4 w-4 text-[#EA1D2C]" />
+                    Nome
+                  </label>
+                  <Input
+                    placeholder="Seu nome"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <User className="h-4 w-4 text-[#EA1D2C]" />
+                    Sobrenome
+                  </label>
+                  <Input
+                    placeholder="Seu sobrenome"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <Phone className="h-4 w-4 text-[#EA1D2C]" />
+                    WhatsApp
+                  </label>
+                  <Input
+                    placeholder="(11) 99999-9999"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <MapPin className="h-4 w-4 text-[#EA1D2C]" />
+                    Endereço
+                  </label>
+                  <Input
+                    placeholder="Rua, número, bairro..."
+                    value={customerAddress}
+                    onChange={(e) => setCustomerAddress(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Referência
+                  </label>
+                  <Input
+                    placeholder="Perto de..."
+                    value={customerReference}
+                    onChange={(e) => setCustomerReference(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Observações
+                  </label>
+                  <Input
+                    placeholder="Ex.: sem cebola"
+                    value={customerNotes}
+                    onChange={(e) => setCustomerNotes(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="mb-4 rounded-lg bg-white p-4 shadow-sm">
@@ -440,12 +595,10 @@ export function Cart() {
                   </div>
                 )}
 
-                {deliveryFee > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Entrega</span>
-                    <span className="font-medium">{formatMoney(deliveryFee)}</span>
-                  </div>
-                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Taxa de entrega</span>
+                  <span className="font-medium">{formatMoney(deliveryFee)}</span>
+                </div>
 
                 <div className="flex items-center justify-between border-t pt-2">
                   <span className="text-lg font-medium">Total</span>

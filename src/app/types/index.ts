@@ -76,6 +76,7 @@ export interface Store {
   logoUrl?: string;
   storeUrl?: string;
   plan?: 'iniciante' | 'pro' | 'premium';
+  deliveryFee?: number;
 }
 
 export interface Plan {

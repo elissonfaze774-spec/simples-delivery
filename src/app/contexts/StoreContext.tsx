@@ -223,6 +223,8 @@ function normalizeStore(store: any): Store {
       ? rawPlan
       : 'iniciante';
 
+  const deliveryFee = Number(store?.deliveryFee ?? store?.delivery_fee ?? 0);
+
   return {
     id: String(store?.id ?? ''),
     name: String(store?.name ?? ''),
@@ -236,6 +238,7 @@ function normalizeStore(store: any): Store {
     storeUrl: String(storeUrl || ''),
     plan,
     suspended,
+    deliveryFee: Number.isFinite(deliveryFee) ? deliveryFee : 0,
   };
 }
 
@@ -335,6 +338,10 @@ function normalizeDbPayload<T extends Record<string, any>>(payload: T): Record<s
     copy.store_url = copy.storeUrl;
   }
 
+  if (copy.deliveryFee !== undefined && copy.delivery_fee === undefined) {
+    copy.delivery_fee = Number(copy.deliveryFee || 0);
+  }
+
   if (copy.maxProducts !== undefined && copy.max_products === undefined) {
     copy.max_products = copy.maxProducts;
   }
@@ -368,6 +375,7 @@ function normalizeDbPayload<T extends Record<string, any>>(payload: T): Record<s
   delete copy.active;
   delete copy.logoUrl;
   delete copy.storeUrl;
+  delete copy.deliveryFee;
   delete copy.maxProducts;
   delete copy.maxOrders;
   delete copy.available;
@@ -786,6 +794,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       try {
         const payload = normalizeDbPayload({
           ...data,
+          deliveryFee:
+            data.deliveryFee !== undefined ? Number(data.deliveryFee || 0) : data.deliveryFee,
           active:
             typeof data.active === 'boolean'
               ? data.active
@@ -1108,6 +1118,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         logo: '',
         banner: '',
         whatsapp: '',
+        delivery_fee: 0,
         plan: 'iniciante',
         store_url: buildStoreUrl(slug),
       };
@@ -1126,48 +1137,48 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const deleteStore = useCallback(
-  async (id: string) => {
-    const previousStores = [...stores];
-    const previousProducts = [...products];
-    const previousCategories = [...categories];
-    const previousCoupons = [...coupons];
+    async (id: string) => {
+      const previousStores = [...stores];
+      const previousProducts = [...products];
+      const previousCategories = [...categories];
+      const previousCoupons = [...coupons];
 
-    setStores(previousStores.filter((item) => String(item.id) !== String(id)));
-    setProducts(previousProducts.filter((item) => String(item.storeId) !== String(id)));
-    setCategories(previousCategories.filter((item) => String(item.storeId) !== String(id)));
-    setCoupons(previousCoupons.filter((item) => String(item.storeId) !== String(id)));
+      setStores(previousStores.filter((item) => String(item.id) !== String(id)));
+      setProducts(previousProducts.filter((item) => String(item.storeId) !== String(id)));
+      setCategories(previousCategories.filter((item) => String(item.storeId) !== String(id)));
+      setCoupons(previousCoupons.filter((item) => String(item.storeId) !== String(id)));
 
-    try {
-      const { error: adminsError } = await withTimeout(
-        async () =>
-          await supabase
-            .from('admins')
-            .update({ store_id: null })
-            .eq('store_id', id),
-        20000
-      );
+      try {
+        const { error: adminsError } = await withTimeout(
+          async () =>
+            await supabase
+              .from('admins')
+              .update({ store_id: null })
+              .eq('store_id', id),
+          20000
+        );
 
-      if (adminsError) throw adminsError;
+        if (adminsError) throw adminsError;
 
-      const { error: storeError } = await withTimeout(
-        async () => await supabase.from('stores').delete().eq('id', id),
-        20000
-      );
+        const { error: storeError } = await withTimeout(
+          async () => await supabase.from('stores').delete().eq('id', id),
+          20000
+        );
 
-      if (storeError) throw storeError;
+        if (storeError) throw storeError;
 
-      await reloadStoreData();
-    } catch (error) {
-      setStores(previousStores);
-      setProducts(previousProducts);
-      setCategories(previousCategories);
-      setCoupons(previousCoupons);
-      console.error('Erro ao deletar loja:', error);
-      throw error;
-    }
-  },
-  [categories, coupons, products, reloadStoreData, stores]
-);
+        await reloadStoreData();
+      } catch (error) {
+        setStores(previousStores);
+        setProducts(previousProducts);
+        setCategories(previousCategories);
+        setCoupons(previousCoupons);
+        console.error('Erro ao deletar loja:', error);
+        throw error;
+      }
+    },
+    [categories, coupons, products, reloadStoreData, stores]
+  );
 
   const updatePlan = useCallback(
     async (planId: 'iniciante' | 'pro' | 'premium', data: Partial<Plan>) => {

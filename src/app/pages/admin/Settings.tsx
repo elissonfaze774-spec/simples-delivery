@@ -5,6 +5,7 @@ import {
   MessageCircle,
   QrCode as QrCodeIcon,
   Store as StoreIcon,
+  Wallet,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
@@ -18,6 +19,13 @@ import { toast } from 'sonner';
 import { QRCodeSVG } from 'qrcode.react';
 import { AdminShell } from '../../components/admin/AdminShell';
 import { getStoreUrl } from '../../lib/urls';
+
+function formatMoney(value: number) {
+  return Number(value || 0).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
+}
 
 export function AdminSettings() {
   const navigate = useNavigate();
@@ -78,6 +86,8 @@ export function AdminSettings() {
   const currentPlan =
     (resolvedStore as any).plan || (resolvedStore as any).plan_id || 'iniciante';
 
+  const currentDeliveryFee = Number((resolvedStore as any).deliveryFee || 0);
+
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(storeLink);
@@ -103,12 +113,18 @@ export function AdminSettings() {
 
     const formData = new FormData(e.currentTarget);
 
+    const rawDeliveryFee = String(formData.get('deliveryFee') || '0')
+      .replace(/\s/g, '')
+      .replace(/\./g, '')
+      .replace(',', '.');
+
     const payload = {
       name: String(formData.get('name') || '').trim(),
       logo: String(formData.get('logo') || '').trim(),
       logoUrl: String(formData.get('logoUrl') || '').trim(),
       banner: String(formData.get('banner') || '').trim(),
       whatsapp: String(formData.get('whatsapp') || '').replace(/\D/g, ''),
+      deliveryFee: Math.max(Number(rawDeliveryFee || 0), 0),
     };
 
     if (!payload.name) {
@@ -123,6 +139,11 @@ export function AdminSettings() {
 
     if (!payload.whatsapp) {
       toast.error('Informe o WhatsApp.');
+      return;
+    }
+
+    if (!Number.isFinite(payload.deliveryFee)) {
+      toast.error('Informe uma taxa de entrega válida.');
       return;
     }
 
@@ -155,6 +176,11 @@ export function AdminSettings() {
           label: 'Plano',
           value: currentPlan,
           helper: 'Plano atual contratado',
+        },
+        {
+          label: 'Entrega',
+          value: formatMoney(currentDeliveryFee),
+          helper: 'Taxa padrão da loja',
         },
       ]}
     >
@@ -216,7 +242,7 @@ export function AdminSettings() {
 
         <Card className="rounded-[28px] border-0 bg-white p-6 shadow-[0_24px_70px_-45px_rgba(15,23,42,0.65)]">
           <div className="mb-6">
-            <p className="text-sm text-slate-500">Aparência e contato</p>
+            <p className="text-sm text-slate-500">Aparência, contato e entrega</p>
             <h2 className="text-2xl font-bold text-slate-950">Informações da loja</h2>
           </div>
 
@@ -260,6 +286,26 @@ export function AdminSettings() {
                     className="h-12 rounded-2xl pl-10"
                   />
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="deliveryFee">Taxa de entrega</Label>
+                <div className="relative mt-2">
+                  <Wallet className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    id="deliveryFee"
+                    name="deliveryFee"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    defaultValue={currentDeliveryFee}
+                    className="h-12 rounded-2xl pl-10"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-end rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                Valor atual da entrega: <span className="ml-2 font-semibold">{formatMoney(currentDeliveryFee)}</span>
               </div>
 
               <div className="md:col-span-2">
