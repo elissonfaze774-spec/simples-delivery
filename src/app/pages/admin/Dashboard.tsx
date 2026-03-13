@@ -416,13 +416,14 @@ export function AdminDashboard() {
                 </div>
 
                 <div
-                  className={`w-fit rounded-full px-3 py-1 text-[11px] font-semibold sm:text-xs ${
-                    isStoreActive ? 'bg-red-500/15 text-red-300' : 'bg-zinc-800 text-zinc-300'
-                  }`}
-                >
-                  {isStoreActive ? 'Loja ativa' : 'Loja suspensa'}
-                </div>
-              </div>
+  className={`w-fit rounded-full border px-3 py-1 text-[11px] font-semibold sm:text-xs ${
+    isStoreActive
+      ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300'
+      : 'border-red-500/30 bg-red-500/15 text-red-300'
+  }`}
+>
+  {isStoreActive ? 'Loja ativa' : 'Loja suspensa'}
+</div>
 
               <h2 className="mt-5 max-w-2xl text-2xl font-black leading-tight text-white sm:text-3xl">
                 BEM VINDO AO PAINEL DE VENDAS DA SUA LOJA
