@@ -412,7 +412,7 @@ export function AdminDashboard() {
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div className="inline-flex w-fit items-center gap-2 rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-red-300 sm:text-xs">
                   <StoreIcon className="h-3.5 w-3.5" />
-                  Painel premium da loja
+                  PAINEL COMPLETO DA LOJA
                 </div>
 
                 <div
@@ -425,7 +425,7 @@ export function AdminDashboard() {
               </div>
 
               <h2 className="mt-5 max-w-2xl text-2xl font-black leading-tight text-white sm:text-3xl">
-                Bem-vindo ao centro de vendas da sua loja.
+                BEM VINDO AO PAINEL DE VENDAS DA SUA LOJA
               </h2>
 
               <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300">
