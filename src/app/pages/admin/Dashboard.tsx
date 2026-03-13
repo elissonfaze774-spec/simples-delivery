@@ -1,14 +1,12 @@
 import { useMemo } from 'react';
+import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   ArrowUpRight,
-  Clock3,
   ExternalLink,
-  Eye,
   Package,
   Settings,
   ShoppingBag,
-  Store as StoreIcon,
   Tag,
   TrendingUp,
   Wallet,
@@ -74,9 +72,9 @@ function DashboardSection({
 }: {
   eyebrow?: string;
   title?: string;
-  action?: React.ReactNode;
+  action?: ReactNode;
   className?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <section
@@ -91,7 +89,9 @@ function DashboardSection({
               </div>
             ) : null}
 
-            {title ? <h2 className="text-2xl font-black tracking-tight text-white">{title}</h2> : null}
+            {title ? (
+              <h2 className="text-2xl font-black tracking-tight text-white">{title}</h2>
+            ) : null}
           </div>
 
           {action ? <div className="shrink-0">{action}</div> : null}
@@ -117,7 +117,11 @@ function MetricBox({
   return (
     <div className="rounded-[24px] border border-white/8 bg-[#090909] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
       <p className="text-sm text-zinc-400">{label}</p>
-      <div className={`mt-2 text-[2rem] font-black tracking-tight ${money ? 'text-emerald-400' : 'text-white'}`}>
+      <div
+        className={`mt-2 text-[2rem] font-black tracking-tight ${
+          money ? 'text-emerald-400' : 'text-white'
+        }`}
+      >
         {value}
       </div>
       <p className="mt-2 text-sm text-zinc-500">{helper}</p>
@@ -143,7 +147,11 @@ function SummaryCard({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-zinc-400">{label}</p>
-          <div className={`mt-3 text-2xl font-black tracking-tight ${money ? 'text-emerald-400' : 'text-white'}`}>
+          <div
+            className={`mt-3 text-2xl font-black tracking-tight ${
+              money ? 'text-emerald-400' : 'text-white'
+            }`}
+          >
             {value}
           </div>
           <p className="mt-2 text-sm text-zinc-500">{helper}</p>
@@ -172,7 +180,9 @@ function ShortcutCard({ item }: { item: ShortcutItem }) {
         </div>
 
         <div>
-          <div className="text-2xl font-black tracking-tight text-white sm:text-xl">{item.label}</div>
+          <div className="text-2xl font-black tracking-tight text-white sm:text-xl">
+            {item.label}
+          </div>
           <p className="mt-1 text-sm text-zinc-400">{item.description}</p>
         </div>
       </div>
@@ -230,11 +240,229 @@ function RevenueChart({ data }: { data: DailyChartItem[] }) {
   );
 }
 
+function WelcomeCard({
+  todayTotal,
+  monthTotal,
+  ticketAverage,
+}: {
+  todayTotal: number;
+  monthTotal: number;
+  ticketAverage: number;
+}) {
+  return (
+    <DashboardSection eyebrow="Painel completo da loja">
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="inline-flex rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-sm font-semibold text-emerald-400">
+            Loja ativa
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-4xl font-black tracking-tight text-white">
+            BEM-VINDO AO PAINEL DE VENDAS
+          </h2>
+          <p className="mt-3 max-w-3xl text-base leading-7 text-zinc-300">
+            Acompanhe faturamento, pedidos, crescimento e desempenho em um painel mais limpo,
+            profissional e fácil de usar.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <MetricBox
+            label="Hoje"
+            value={formatMoney(todayTotal)}
+            helper="Vendas do dia atual"
+            money
+          />
+          <MetricBox
+            label="Este mês"
+            value={formatMoney(monthTotal)}
+            helper="Faturamento mensal"
+            money
+          />
+          <MetricBox
+            label="Ticket médio"
+            value={formatMoney(ticketAverage)}
+            helper="Valor médio por pedido"
+            money
+          />
+        </div>
+      </div>
+    </DashboardSection>
+  );
+}
+
+function StoreLinkCard({
+  storeUrl,
+  onOpenStore,
+  onEditStore,
+}: {
+  storeUrl: string;
+  onOpenStore: () => void;
+  onEditStore: () => void;
+}) {
+  return (
+    <DashboardSection title="LINK DA LOJA">
+      <div className="flex h-full flex-col gap-5">
+        <div className="rounded-[24px] border border-white/8 bg-[#070707] p-5">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
+            URL pública
+          </div>
+          <div className="mt-3 break-all text-base font-semibold text-white">
+            {storeUrl || 'Link indisponível'}
+          </div>
+        </div>
+
+        <Button
+          type="button"
+          onClick={onOpenStore}
+          className="h-12 rounded-full bg-[#ff1833] text-base font-bold text-white shadow-[0_0_24px_rgba(255,24,51,0.35)] hover:bg-[#ff2942]"
+        >
+          Ver loja
+        </Button>
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onEditStore}
+          className="h-12 rounded-full border-white/10 bg-[#050505] text-base font-bold text-white hover:bg-[#111111]"
+        >
+          <Settings className="mr-2 h-4 w-4" />
+          Editar loja
+        </Button>
+      </div>
+    </DashboardSection>
+  );
+}
+
+function ShortcutsSection({ shortcuts }: { shortcuts: ShortcutItem[] }) {
+  return (
+    <div className="grid gap-4 xl:grid-cols-3">
+      {shortcuts.map((item) => (
+        <ShortcutCard key={item.label} item={item} />
+      ))}
+    </div>
+  );
+}
+
+function SummaryCardsSection({
+  totalRevenue,
+  monthCount,
+  visibleProducts,
+  storeCoupons,
+}: {
+  totalRevenue: number;
+  monthCount: number;
+  visibleProducts: number;
+  storeCoupons: number;
+}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+      <SummaryCard
+        icon={Wallet}
+        label="Faturamento total"
+        value={formatMoney(totalRevenue)}
+        helper="Tudo que sua loja já vendeu"
+        money
+      />
+      <SummaryCard
+        icon={TrendingUp}
+        label="Pedidos no mês"
+        value={String(monthCount)}
+        helper="Quantidade de pedidos neste mês"
+      />
+      <SummaryCard
+        icon={Package}
+        label="Produtos ativos"
+        value={String(visibleProducts)}
+        helper="Itens disponíveis no catálogo"
+      />
+      <SummaryCard
+        icon={Tag}
+        label="Cupons criados"
+        value={String(storeCoupons)}
+        helper="Campanhas e descontos ativos"
+      />
+    </div>
+  );
+}
+
+function MonthlySummarySection({
+  monthTotal,
+  monthCount,
+  ticketAverage,
+  plan,
+  whatsapp,
+  onOpenSettings,
+}: {
+  monthTotal: number;
+  monthCount: number;
+  ticketAverage: number;
+  plan?: string;
+  whatsapp?: string;
+  onOpenSettings: () => void;
+}) {
+  return (
+    <DashboardSection
+      eyebrow="Resumo mensal"
+      title="Sua loja este mês"
+      action={
+        <button
+          type="button"
+          onClick={onOpenSettings}
+          className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#f3162d]/20 bg-[#22090d] text-[#ff2541] transition hover:bg-[#2c0c11]"
+        >
+          <ArrowUpRight className="h-5 w-5" />
+        </button>
+      }
+    >
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="rounded-[24px] border border-white/8 bg-[#070707] p-5">
+          <p className="text-sm text-zinc-400">Faturamento mensal</p>
+          <div className="mt-3 text-[2rem] font-black tracking-tight text-emerald-400">
+            {formatMoney(monthTotal)}
+          </div>
+        </div>
+
+        <div className="rounded-[24px] border border-white/8 bg-[#070707] p-5">
+          <p className="text-sm text-zinc-400">Pedidos do mês</p>
+          <div className="mt-3 text-[2rem] font-black tracking-tight text-white">
+            {monthCount}
+          </div>
+        </div>
+
+        <div className="rounded-[24px] border border-white/8 bg-[#070707] p-5">
+          <p className="text-sm text-zinc-400">Ticket médio</p>
+          <div className="mt-3 text-[2rem] font-black tracking-tight text-emerald-400">
+            {formatMoney(ticketAverage)}
+          </div>
+        </div>
+
+        <div className="rounded-[24px] border border-white/8 bg-[#070707] p-5">
+          <p className="text-sm text-zinc-400">Plano atual</p>
+          <div className="mt-3 text-[2rem] font-black tracking-tight text-white">
+            {plan || 'Premium'}
+          </div>
+        </div>
+
+        <div className="rounded-[24px] border border-white/8 bg-[#070707] p-5">
+          <p className="text-sm text-zinc-400">WhatsApp da loja</p>
+          <div className="mt-3 break-all text-[2rem] font-black tracking-tight text-white">
+            {whatsapp || 'Não informado'}
+          </div>
+        </div>
+      </div>
+    </DashboardSection>
+  );
+}
+
 export function AdminDashboardPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { stores, getStoreByAdminEmail, getStoreProducts, getStoreCategories, getStoreCoupons } = useStore();
+  const { stores, getStoreByAdminEmail, getStoreProducts, getStoreCategories, getStoreCoupons } =
+    useStore();
   const { orders = [] } = useOrders();
 
   const adminBase = useMemo(() => resolveAdminBase(location.pathname), [location.pathname]);
@@ -329,7 +557,7 @@ export function AdminDashboardPage() {
   }, [activeOrders]);
 
   const storeUrl = useMemo(() => {
-    if (!store) return '';
+    if (!store?.slug) return '';
     try {
       return getStoreUrl(store.slug);
     } catch {
@@ -346,19 +574,27 @@ export function AdminDashboardPage() {
     navigate(`${adminBase}/${segment}`);
   };
 
+  const goToProducts = () => {
+    navigate(`${adminBase}/products`);
+  };
+
+  const goToSettings = () => {
+    navigate(`${adminBase}/settings`);
+  };
+
   const shortcuts = useMemo<ShortcutItem[]>(
     () => [
       {
         label: 'Produtos',
         description: 'Criar, editar e organizar itens',
         icon: Package,
-        onClick: () => goTo('products'),
+        onClick: goToProducts,
       },
       {
         label: 'Categorias',
         description: 'Gerenciar categorias da loja',
         icon: ShoppingBag,
-        onClick: () => goTo('categories'),
+        onClick: goToProducts,
       },
       {
         label: 'Cupons',
@@ -421,177 +657,84 @@ export function AdminDashboardPage() {
         },
       ]}
     >
-      <div className="grid gap-6 lg:grid-cols-12">
-        <div className="order-1 lg:order-none lg:col-span-8">
-          <DashboardSection eyebrow="Painel completo da loja">
-            <div className="flex flex-col gap-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="inline-flex rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-sm font-semibold text-emerald-400">
-                  Loja ativa
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-4xl font-black tracking-tight text-white">
-                  BEM-VINDO AO PAINEL DE VENDAS
-                </h2>
-                <p className="mt-3 max-w-3xl text-base leading-7 text-zinc-300">
-                  Acompanhe faturamento, pedidos, crescimento e desempenho em um painel mais
-                  limpo, profissional e fácil de usar.
-                </p>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <MetricBox
-                  label="Hoje"
-                  value={formatMoney(todayMetrics.total)}
-                  helper="Vendas do dia atual"
-                  money
-                />
-                <MetricBox
-                  label="Este mês"
-                  value={formatMoney(monthMetrics.total)}
-                  helper="Faturamento mensal"
-                  money
-                />
-                <MetricBox
-                  label="Ticket médio"
-                  value={formatMoney(monthMetrics.ticketAverage)}
-                  helper="Valor médio por pedido"
-                  money
-                />
-              </div>
-            </div>
-          </DashboardSection>
+      <div className="hidden lg:grid lg:grid-cols-12 lg:gap-6">
+        <div className="lg:col-span-8">
+          <WelcomeCard
+            todayTotal={todayMetrics.total}
+            monthTotal={monthMetrics.total}
+            ticketAverage={monthMetrics.ticketAverage}
+          />
         </div>
 
-        <div className="order-2 lg:order-none lg:col-span-4">
-          <DashboardSection title="LINK DA LOJA">
-            <div className="flex h-full flex-col gap-5">
-              <div className="rounded-[24px] border border-white/8 bg-[#070707] p-5">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
-                  URL pública
-                </div>
-                <div className="mt-3 break-all text-base font-semibold text-white">
-                  {storeUrl || 'Link indisponível'}
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                onClick={handleOpenStore}
-                className="h-12 rounded-full bg-[#ff1833] text-base font-bold text-white shadow-[0_0_24px_rgba(255,24,51,0.35)] hover:bg-[#ff2942]"
-              >
-                Ver loja
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => goTo('settings')}
-                className="h-12 rounded-full border-white/10 bg-[#050505] text-base font-bold text-white hover:bg-[#111111]"
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                Editar loja
-              </Button>
-            </div>
-          </DashboardSection>
+        <div className="lg:col-span-4">
+          <StoreLinkCard
+            storeUrl={storeUrl}
+            onOpenStore={handleOpenStore}
+            onEditStore={goToSettings}
+          />
         </div>
 
-        <div className="order-3 lg:order-none lg:col-span-12">
-          <div className="grid gap-4 xl:grid-cols-3">
-            {shortcuts.map((item) => (
-              <ShortcutCard key={item.label} item={item} />
-            ))}
-          </div>
+        <div className="lg:col-span-12">
+          <ShortcutsSection shortcuts={shortcuts} />
         </div>
 
-        <div className="order-4 lg:order-none lg:col-span-7">
+        <div className="lg:col-span-7">
           <RevenueChart data={dailyChartData} />
         </div>
 
-        <div className="order-5 lg:order-none lg:col-span-5">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-            <SummaryCard
-              icon={Wallet}
-              label="Faturamento total"
-              value={formatMoney(totalRevenue)}
-              helper="Tudo que sua loja já vendeu"
-              money
-            />
-            <SummaryCard
-              icon={TrendingUp}
-              label="Pedidos no mês"
-              value={String(monthMetrics.count)}
-              helper="Quantidade de pedidos neste mês"
-            />
-            <SummaryCard
-              icon={Package}
-              label="Produtos ativos"
-              value={String(visibleProducts.length)}
-              helper="Itens disponíveis no catálogo"
-            />
-            <SummaryCard
-              icon={Tag}
-              label="Cupons criados"
-              value={String(storeCoupons.length)}
-              helper="Campanhas e descontos ativos"
-            />
-          </div>
+        <div className="lg:col-span-5">
+          <SummaryCardsSection
+            totalRevenue={totalRevenue}
+            monthCount={monthMetrics.count}
+            visibleProducts={visibleProducts.length}
+            storeCoupons={storeCoupons.length}
+          />
         </div>
 
-        <div className="order-6 lg:order-none lg:col-span-12">
-          <DashboardSection
-            eyebrow="Resumo mensal"
-            title="Sua loja este mês"
-            action={
-              <button
-                type="button"
-                onClick={() => goTo('settings')}
-                className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#f3162d]/20 bg-[#22090d] text-[#ff2541] transition hover:bg-[#2c0c11]"
-              >
-                <ArrowUpRight className="h-5 w-5" />
-              </button>
-            }
-          >
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-              <div className="rounded-[24px] border border-white/8 bg-[#070707] p-5">
-                <p className="text-sm text-zinc-400">Faturamento mensal</p>
-                <div className="mt-3 text-[2rem] font-black tracking-tight text-emerald-400">
-                  {formatMoney(monthMetrics.total)}
-                </div>
-              </div>
-
-              <div className="rounded-[24px] border border-white/8 bg-[#070707] p-5">
-                <p className="text-sm text-zinc-400">Pedidos do mês</p>
-                <div className="mt-3 text-[2rem] font-black tracking-tight text-white">
-                  {monthMetrics.count}
-                </div>
-              </div>
-
-              <div className="rounded-[24px] border border-white/8 bg-[#070707] p-5">
-                <p className="text-sm text-zinc-400">Ticket médio</p>
-                <div className="mt-3 text-[2rem] font-black tracking-tight text-emerald-400">
-                  {formatMoney(monthMetrics.ticketAverage)}
-                </div>
-              </div>
-
-              <div className="rounded-[24px] border border-white/8 bg-[#070707] p-5">
-                <p className="text-sm text-zinc-400">Plano atual</p>
-                <div className="mt-3 text-[2rem] font-black tracking-tight text-white">
-                  {store.plan || 'Premium'}
-                </div>
-              </div>
-
-              <div className="rounded-[24px] border border-white/8 bg-[#070707] p-5">
-                <p className="text-sm text-zinc-400">WhatsApp da loja</p>
-                <div className="mt-3 break-all text-[2rem] font-black tracking-tight text-white">
-                  {store.whatsapp || 'Não informado'}
-                </div>
-              </div>
-            </div>
-          </DashboardSection>
+        <div className="lg:col-span-12">
+          <MonthlySummarySection
+            monthTotal={monthMetrics.total}
+            monthCount={monthMetrics.count}
+            ticketAverage={monthMetrics.ticketAverage}
+            plan={store.plan}
+            whatsapp={store.whatsapp}
+            onOpenSettings={goToSettings}
+          />
         </div>
+      </div>
+
+      <div className="space-y-6 lg:hidden">
+        <WelcomeCard
+          todayTotal={todayMetrics.total}
+          monthTotal={monthMetrics.total}
+          ticketAverage={monthMetrics.ticketAverage}
+        />
+
+        <StoreLinkCard
+          storeUrl={storeUrl}
+          onOpenStore={handleOpenStore}
+          onEditStore={goToSettings}
+        />
+
+        <ShortcutsSection shortcuts={shortcuts} />
+
+        <RevenueChart data={dailyChartData} />
+
+        <SummaryCardsSection
+          totalRevenue={totalRevenue}
+          monthCount={monthMetrics.count}
+          visibleProducts={visibleProducts.length}
+          storeCoupons={storeCoupons.length}
+        />
+
+        <MonthlySummarySection
+          monthTotal={monthMetrics.total}
+          monthCount={monthMetrics.count}
+          ticketAverage={monthMetrics.ticketAverage}
+          plan={store.plan}
+          whatsapp={store.whatsapp}
+          onOpenSettings={goToSettings}
+        />
       </div>
     </AdminShell>
   );
