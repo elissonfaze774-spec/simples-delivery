@@ -385,7 +385,7 @@ export function AdminDashboard() {
   return (
     <AdminShell
       title="Dashboard"
-      subtitle={`Loja ${resolvedStore.name}`}
+      subtitle=""
       storeName={resolvedStore.name}
       onBack={handleBackToStore}
       stats={[
@@ -427,7 +427,7 @@ export function AdminDashboard() {
               </div>
 
               <h2 className="mt-5 max-w-2xl text-2xl font-black leading-tight text-white sm:text-3xl">
-                BEM VINDO AO PAINEL DE VENDAS DA SUA LOJA
+                BEM-VINDO AO PAINEL DE VENDAS
               </h2>
 
               <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300">
@@ -491,7 +491,7 @@ export function AdminDashboard() {
                 className="w-full rounded-full border-0 bg-[#f3162d] text-white shadow-[0_8px_24px_rgba(243,22,45,0.35)] transition hover:bg-[#d90f24]"
                 onClick={handleBackToStore}
               >
-                Abrir nesta aba
+                Ver loja
               </Button>
 
               <Button
@@ -503,13 +503,6 @@ export function AdminDashboard() {
                 <Settings className="mr-2 h-4 w-4" />
                 Editar loja
               </Button>
-            </div>
-
-            <div className="mt-5 rounded-3xl border border-red-500/20 bg-red-500/10 p-4">
-              <p className="text-sm font-semibold text-red-300">Dica para vender mais</p>
-              <p className="mt-1 text-sm text-zinc-200">
-                Compartilhe o link da loja no WhatsApp e status todos os dias.
-              </p>
             </div>
           </Card>
         </section>
