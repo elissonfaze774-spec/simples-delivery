@@ -113,24 +113,17 @@ const SALES_WHATSAPP = '5582987227433';
 function openUpgradeWhatsApp(params: {
   storeName?: string;
   currentPlan?: string;
-  reason?: string;
 }) {
   const storeName = String(params.storeName || 'Minha loja').trim();
   const currentPlan = String(params.currentPlan || 'Simples').trim();
-  const reason = String(params.reason || 'Atingi o limite do meu plano.').trim();
 
   const message = [
-    'Olá! Tudo bem?',
-    '',
-    'Sou administrador de uma loja na plataforma e gostaria de solicitar um upgrade de plano.',
+    'Olá! Tenho interesse em fazer upgrade do meu plano.',
     '',
     `Loja: ${storeName}`,
     `Plano atual: ${currentPlan}`,
-    `Motivo: ${reason}`,
     '',
-    'Poderia me enviar as opções disponíveis para upgrade?',
-    '',
-    'Obrigado!',
+    'Pode me enviar as opções disponíveis?',
   ].join('\n');
 
   window.open(
@@ -518,7 +511,9 @@ export function Cart() {
                   const itemId = String(item?.product?.id || item?.id || `item-${index}`);
                   const itemName = String(item?.product?.name || item?.name || 'Produto');
                   const itemImage =
-                    item?.product?.image || item?.image || 'https://placehold.co/80x80?text=Produto';
+                    item?.product?.image ||
+                    item?.image ||
+                    'https://placehold.co/80x80?text=Produto';
                   const itemPrice = Number(item?.product?.price || item?.price || 0);
                   const itemQuantity = Number(item?.quantity || 1);
 
@@ -779,7 +774,9 @@ export function Cart() {
           <div className="mt-4 grid gap-3">
             <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
               <p className="text-sm font-medium text-gray-500">Plano atual da loja</p>
-              <p className="mt-1 text-lg font-bold text-gray-900">{upgradeModal.currentPlan}</p>
+              <p className="mt-1 text-lg font-bold text-gray-900">
+                {upgradeModal.currentPlan}
+              </p>
             </div>
 
             {upgradeModal.suggestedPlans.length > 0 && (
@@ -813,9 +810,6 @@ export function Cart() {
                 openUpgradeWhatsApp({
                   storeName: String((store as any)?.name || 'Minha loja'),
                   currentPlan: upgradeModal.currentPlan,
-                  reason:
-                    upgradeModal.description ||
-                    'Atingi o limite do meu plano e preciso ampliar minha capacidade.',
                 })
               }
               className="h-11 flex-1 rounded-xl bg-red-500 text-white hover:bg-red-600"
