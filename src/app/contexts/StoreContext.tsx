@@ -46,6 +46,12 @@ interface StoreContextType {
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
+const STORE_CACHE_KEY = 'saas:stores';
+const PRODUCTS_CACHE_KEY = 'saas:products';
+const CATEGORIES_CACHE_KEY = 'saas:categories';
+const COUPONS_CACHE_KEY = 'saas:coupons';
+const PLANS_CACHE_KEY = 'saas:plans';
+
 const DEFAULT_PLANS: Plan[] = [
   {
     id: 'iniciante',
@@ -118,6 +124,25 @@ function buildStoreUrl(slug?: string) {
   return `${origin}/loja/${encodeURIComponent(slug || '')}`;
 }
 
+function getCache<T>(key: string): T[] {
+  try {
+    if (typeof window === 'undefined') return [];
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function setCache<T>(key: string, value: T[]) {
+  try {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    //
+  }
+}
+
 function normalizeStore(store: any): Store {
   const slug = String(store?.slug || slugify(store?.name || '') || store?.id || '');
   const rawPlan = String(store?.plan ?? store?.plan_id ?? 'iniciante').toLowerCase();
@@ -131,7 +156,7 @@ function normalizeStore(store: any): Store {
     id: String(store?.id ?? ''),
     name: String(store?.name ?? ''),
     slug,
-    logo: String(store?.logo ?? store?.logo_url ?? ''),
+    logo: String(store?.logo ?? ''),
     banner: String(store?.banner ?? store?.banner_url ?? ''),
     whatsapp: String(store?.whatsapp ?? ''),
     active:
@@ -141,7 +166,7 @@ function normalizeStore(store: any): Store {
         ? store.is_active
         : true,
     adminEmail: normalizeEmail(store?.adminEmail ?? store?.admin_email),
-    logoUrl: String(store?.logo_url ?? store?.logoUrl ?? store?.logo ?? ''),
+    logoUrl: String(store?.logo_url ?? store?.logoUrl ?? ''),
     storeUrl: String(store?.store_url ?? store?.storeUrl ?? buildStoreUrl(slug)),
     plan,
     suspended:
@@ -228,12 +253,27 @@ function mergePlansWithDefaults(list: Plan[]): Plan[] {
 }
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [stores, setStores] = useState<Store[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [plans, setPlans] = useState<Plan[]>(DEFAULT_PLANS);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [stores, setStores] = useState<Store[]>(() => getCache<Store>(STORE_CACHE_KEY).map(normalizeStore));
+  const [products, setProducts] = useState<Product[]>(() =>
+    getCache<Product>(PRODUCTS_CACHE_KEY).map(normalizeProduct)
+  );
+  const [categories, setCategories] = useState<Category[]>(() =>
+    getCache<Category>(CATEGORIES_CACHE_KEY).map(normalizeCategory)
+  );
+  const [coupons, setCoupons] = useState<Coupon[]>(() =>
+    getCache<Coupon>(COUPONS_CACHE_KEY).map(normalizeCoupon)
+  );
+  const [plans, setPlans] = useState<Plan[]>(() => {
+    const cached = getCache<Plan>(PLANS_CACHE_KEY);
+    return cached.length ? mergePlansWithDefaults(cached) : DEFAULT_PLANS;
+  });
+  const [isLoaded, setIsLoaded] = useState<boolean>(() => {
+    const hasStores = getCache<Store>(STORE_CACHE_KEY).length > 0;
+    const hasProducts = getCache<Product>(PRODUCTS_CACHE_KEY).length > 0;
+    const hasCategories = getCache<Category>(CATEGORIES_CACHE_KEY).length > 0;
+    const hasCoupons = getCache<Coupon>(COUPONS_CACHE_KEY).length > 0;
+    return hasStores || hasProducts || hasCategories || hasCoupons;
+  });
 
   const reloadStoreData = useCallback(async () => {
     try {
@@ -250,19 +290,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (categoriesRes.error) throw categoriesRes.error;
       if (couponsRes.error) throw couponsRes.error;
 
-      setStores((storesRes.data || []).map(normalizeStore));
-      setProducts((productsRes.data || []).map(normalizeProduct));
-      setCategories((categoriesRes.data || []).map(normalizeCategory));
-      setCoupons((couponsRes.data || []).map(normalizeCoupon));
+      const nextStores = (storesRes.data || []).map(normalizeStore);
+      const nextProducts = (productsRes.data || []).map(normalizeProduct);
+      const nextCategories = (categoriesRes.data || []).map(normalizeCategory);
+      const nextCoupons = (couponsRes.data || []).map(normalizeCoupon);
+      const nextPlans =
+        !plansRes.error && plansRes.data
+          ? mergePlansWithDefaults(plansRes.data as any)
+          : DEFAULT_PLANS;
 
-      if (!plansRes.error && plansRes.data) {
-        setPlans(mergePlansWithDefaults(plansRes.data as any));
-      } else {
-        setPlans(DEFAULT_PLANS);
-      }
+      setStores(nextStores);
+      setProducts(nextProducts);
+      setCategories(nextCategories);
+      setCoupons(nextCoupons);
+      setPlans(nextPlans);
+
+      setCache(STORE_CACHE_KEY, nextStores);
+      setCache(PRODUCTS_CACHE_KEY, nextProducts);
+      setCache(CATEGORIES_CACHE_KEY, nextCategories);
+      setCache(COUPONS_CACHE_KEY, nextCoupons);
+      setCache(PLANS_CACHE_KEY, nextPlans);
     } catch (error) {
       console.error('Erro ao carregar StoreContext:', error);
-      setPlans(DEFAULT_PLANS);
+      setPlans((current) => (current.length ? current : DEFAULT_PLANS));
     } finally {
       setIsLoaded(true);
     }
