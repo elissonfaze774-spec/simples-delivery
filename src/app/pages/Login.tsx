@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, ShieldCheck, LogIn } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, LogIn, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useStore } from '../contexts/StoreContext';
@@ -20,6 +20,9 @@ export function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const whatsappLink =
+    'https://wa.me/5582987227433?text=Ol%C3%A1%21%20Tenho%20interesse%20em%20obter%20acesso%20ao%20seu%20SaaS.%20Pode%20me%20passar%20mais%20informa%C3%A7%C3%B5es%3F';
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -55,6 +58,10 @@ export function Login() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleGetAccess = () => {
+    window.open(whatsappLink, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -94,7 +101,7 @@ export function Login() {
 
             <p className="mt-5 max-w-lg text-lg leading-8 text-zinc-400">
               Acompanhe pedidos, organize produtos, ajuste cupons e mantenha sua
-              operação em dia com o Simples Delivery.
+              operação em dia com o mesmo visual premium do painel do seu SaaS.
             </p>
           </div>
         </div>
@@ -156,12 +163,22 @@ export function Login() {
                 <LogIn className="mr-2 h-5 w-5" />
                 {isSubmitting ? 'Entrando...' : 'Entrar'}
               </Button>
+
+              <Button
+                type="button"
+                onClick={handleGetAccess}
+                className="h-14 w-full rounded-2xl border border-red-500/20 bg-white/5 text-base font-bold text-white transition hover:bg-red-500/10"
+              >
+                <MessageCircle className="mr-2 h-5 w-5" />
+                Obter acesso
+              </Button>
             </form>
 
             <div className="mt-6 rounded-2xl border border-red-500/10 bg-red-500/5 p-4">
               <p className="text-xs leading-6 text-zinc-400">
-                Acesso restrito ao administrador da loja. Faça login para gerenciar
-                pedidos, produtos, categorias e desempenho da operação.
+                Já é cliente? Faça login normalmente. Ainda não tem acesso? Clique
+                em <span className="font-semibold text-white">Obter acesso</span> e fale
+                conosco no WhatsApp.
               </p>
             </div>
           </div>
