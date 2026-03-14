@@ -94,7 +94,7 @@ export function Login() {
 
             <p className="mt-5 max-w-lg text-lg leading-8 text-zinc-400">
               Acompanhe pedidos, organize produtos, ajuste cupons e mantenha sua
-              operação em dia com o mesmo visual premium do painel do seu SaaS.
+              operação em dia com o Simples Delivery.
             </p>
           </div>
         </div>
