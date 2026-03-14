@@ -30,7 +30,10 @@ export function Home() {
   const store = useMemo(() => {
     if (slug) {
       const foundByRouteSlug = stores.find(
-        (item: any) => String(item.slug || '').trim().toLowerCase() === String(slug).trim().toLowerCase()
+        (item: any) =>
+          String(item.slug || '')
+            .trim()
+            .toLowerCase() === String(slug).trim().toLowerCase()
       );
       if (foundByRouteSlug) return foundByRouteSlug;
     }
@@ -43,7 +46,9 @@ export function Home() {
     if (slugParam) {
       const foundBySlug = stores.find(
         (item: any) =>
-          String(item.slug || '').trim().toLowerCase() === String(slugParam).trim().toLowerCase()
+          String(item.slug || '')
+            .trim()
+            .toLowerCase() === String(slugParam).trim().toLowerCase()
       );
       if (foundBySlug) return foundBySlug;
     }
@@ -91,8 +96,8 @@ export function Home() {
     navigate(user.role === 'super-admin' ? '/super-admin' : '/admin');
   };
 
-  if (!isLoaded && stores.length === 0) {
-    return <div className="p-4">Carregando loja...</div>;
+  if (!store && !isLoaded) {
+    return null;
   }
 
   if (!store) {
@@ -110,14 +115,10 @@ export function Home() {
                 alt={store.name}
                 className="w-8 h-8 rounded-full object-cover"
               />
-            ) : store.logo ? (
-              <img
-                src={store.logo}
-                alt={store.name}
-                className="w-8 h-8 rounded-full object-cover"
-              />
             ) : (
-              <span className="text-2xl">🍔</span>
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-base">
+                {store.logo || '🍔'}
+              </div>
             )}
 
             <h1 className="font-semibold text-white truncate">{store.name}</h1>
@@ -128,9 +129,7 @@ export function Home() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() =>
-                  navigate(store.slug ? `/orders?store=${store.id}` : '/orders')
-                }
+                onClick={() => navigate(`/orders?store=${store.id}`)}
                 className="text-white hover:bg-white/10"
               >
                 <Package className="w-4 h-4 mr-1" />
@@ -165,7 +164,11 @@ export function Home() {
 
       <div className="max-w-screen-lg mx-auto">
         {store.banner ? (
-          <img src={store.banner} alt="Banner" className="w-full h-40 object-cover" />
+          <img
+            src={store.banner}
+            alt="Banner"
+            className="w-full h-40 object-cover"
+          />
         ) : (
           <div className="w-full h-40 bg-gray-200 flex items-center justify-center text-gray-500">
             Banner da loja
@@ -267,9 +270,7 @@ export function Home() {
             <div className="fixed bottom-4 right-4 md:bottom-8 md:right-8 z-30">
               <Button
                 size="lg"
-                onClick={() =>
-                  navigate(store.slug ? `/cart?store=${store.id}` : '/cart')
-                }
+                onClick={() => navigate(`/cart?store=${store.id}`)}
                 className="rounded-full shadow-lg relative bg-[#EA1D2C] hover:bg-[#D01929]"
               >
                 <ShoppingCart className="w-5 h-5 mr-2" />
