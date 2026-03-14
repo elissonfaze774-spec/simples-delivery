@@ -1,12 +1,18 @@
 import { ShoppingCart, LogIn, Package, LayoutDashboard } from 'lucide-react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../contexts/StoreContext';
-import { supabase } from '../lib/supabase';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
+
+function formatMoney(value: number) {
+  return Number(value || 0).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
+}
 
 export function Home() {
   const navigate = useNavigate();
@@ -15,104 +21,40 @@ export function Home() {
   const { user } = useAuth();
   const { stores, isLoaded, getStore, getStoreCategories, getProductsByCategory } = useStore();
   const { items, addToCart } = useCart();
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [resolvingStore, setResolvingStore] = useState(false);
 
-  const storeIdFromQuery = searchParams.get('store');
-  const slugFromQuery = searchParams.get('slug');
-  const routeSlug = slug?.trim().toLowerCase() || '';
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const storeParam = searchParams.get('store');
+  const slugParam = searchParams.get('slug');
 
   const store = useMemo(() => {
-    if (routeSlug) {
-      const byRouteSlug = stores.find(
-        (s: any) => (s.slug || '').trim().toLowerCase() === routeSlug
+    if (slug) {
+      const foundByRouteSlug = stores.find(
+        (item: any) => String(item.slug || '').trim().toLowerCase() === String(slug).trim().toLowerCase()
       );
-      if (byRouteSlug) return byRouteSlug;
+      if (foundByRouteSlug) return foundByRouteSlug;
     }
 
-    if (storeIdFromQuery) {
-      const byId = getStore(storeIdFromQuery);
-      if (byId) return byId;
-
-      const bySlug = stores.find(
-        (s: any) => (s.slug || '').trim().toLowerCase() === storeIdFromQuery.trim().toLowerCase()
-      );
-      if (bySlug) return bySlug;
+    if (storeParam) {
+      const foundById = getStore(storeParam);
+      if (foundById) return foundById;
     }
 
-    if (slugFromQuery) {
-      const bySlug = stores.find(
-        (s: any) => (s.slug || '').trim().toLowerCase() === slugFromQuery.trim().toLowerCase()
+    if (slugParam) {
+      const foundBySlug = stores.find(
+        (item: any) =>
+          String(item.slug || '').trim().toLowerCase() === String(slugParam).trim().toLowerCase()
       );
-      if (bySlug) return bySlug;
+      if (foundBySlug) return foundBySlug;
     }
 
-    const activeStores = stores.filter((s) => s.active && !s.suspended);
-    if (activeStores.length > 0) return activeStores[0];
+    const activeStore = stores.find((item) => item.active && !item.suspended);
+    if (activeStore) return activeStore;
 
     return stores[0];
-  }, [routeSlug, storeIdFromQuery, slugFromQuery, stores, getStore]);
+  }, [slug, slugParam, storeParam, stores, getStore]);
 
-  const triedResolveRef = useRef(false);
-
-  useEffect(() => {
-    if (triedResolveRef.current) return;
-    if (store) return;
-
-    const lookupValue = routeSlug || storeIdFromQuery || slugFromQuery;
-    if (!lookupValue) return;
-
-    triedResolveRef.current = true;
-    setResolvingStore(true);
-
-    (async () => {
-      try {
-        const searchValue = lookupValue.trim();
-
-        let { data: found, error } = await supabase
-          .from('stores')
-          .select('id, slug')
-          .ilike('slug', searchValue)
-          .maybeSingle();
-
-        if (error || !found) {
-          const { data: byName, error: nameErr } = await supabase
-            .from('stores')
-            .select('id, slug')
-            .ilike('name', searchValue)
-            .maybeSingle();
-
-          if (nameErr) {
-            console.error('Erro ao buscar loja por name fallback:', nameErr);
-          }
-
-          found = byName || null;
-        }
-
-        if (found?.slug) {
-          navigate(`/loja/${found.slug}`, { replace: true });
-          return;
-        }
-
-        if (found?.id) {
-          const newSearch = new URLSearchParams(window.location.search);
-          newSearch.set('store', String(found.id));
-          navigate(`${window.location.pathname}?${newSearch.toString()}`, { replace: true });
-        }
-      } catch (e) {
-        console.error('Erro no fallback de resolução de store:', e);
-      } finally {
-        setResolvingStore(false);
-      }
-    })();
-  }, [routeSlug, storeIdFromQuery, slugFromQuery, store, navigate]);
-
-  useEffect(() => {
-    triedResolveRef.current = false;
-  }, [routeSlug, storeIdFromQuery, slugFromQuery]);
-
-  const resolvedStoreId = store?.id;
-  const categories = resolvedStoreId ? getStoreCategories(resolvedStoreId) : [];
+  const categories = store ? getStoreCategories(store.id) : [];
   const isStoreBlocked = !!store && (!store.active || store.suspended);
 
   useEffect(() => {
@@ -123,28 +65,22 @@ export function Home() {
       return;
     }
 
-    if (selectedCategory && !categories.some((c) => c.id === selectedCategory)) {
+    if (selectedCategory && !categories.some((category) => category.id === selectedCategory)) {
       setSelectedCategory(categories[0]?.id ?? null);
     }
   }, [categories, selectedCategory, isStoreBlocked]);
 
-  const cartItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
-
-  if (!store && (resolvingStore || (!isLoaded && stores.length === 0))) {
-    return <div className="p-4">Abrindo loja...</div>;
-  }
-
-  if (!store || !resolvedStoreId) {
-    return <div className="p-4">Loja não encontrada</div>;
-  }
-
   const displayProducts =
-    !isStoreBlocked && selectedCategory
-      ? getProductsByCategory(resolvedStoreId, selectedCategory)
+    store && selectedCategory && !isStoreBlocked
+      ? getProductsByCategory(store.id, selectedCategory).filter(
+          (product) => product.available !== false
+        )
       : [];
 
   const selectedCategoryName =
-    categories.find((c) => c.id === selectedCategory)?.name || '';
+    categories.find((category) => category.id === selectedCategory)?.name || '';
+
+  const cartItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const goToPanel = () => {
     if (!user) {
@@ -154,6 +90,14 @@ export function Home() {
 
     navigate(user.role === 'super-admin' ? '/super-admin' : '/admin');
   };
+
+  if (!isLoaded && stores.length === 0) {
+    return <div className="p-4">Carregando loja...</div>;
+  }
+
+  if (!store) {
+    return <div className="p-4">Loja não encontrada</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -166,9 +110,16 @@ export function Home() {
                 alt={store.name}
                 className="w-8 h-8 rounded-full object-cover"
               />
+            ) : store.logo ? (
+              <img
+                src={store.logo}
+                alt={store.name}
+                className="w-8 h-8 rounded-full object-cover"
+              />
             ) : (
-              <span className="text-2xl">{store.logo}</span>
+              <span className="text-2xl">🍔</span>
             )}
+
             <h1 className="font-semibold text-white truncate">{store.name}</h1>
           </div>
 
@@ -177,7 +128,9 @@ export function Home() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate('/orders')}
+                onClick={() =>
+                  navigate(store.slug ? `/orders?store=${store.id}` : '/orders')
+                }
                 className="text-white hover:bg-white/10"
               >
                 <Package className="w-4 h-4 mr-1" />
@@ -212,11 +165,7 @@ export function Home() {
 
       <div className="max-w-screen-lg mx-auto">
         {store.banner ? (
-          <img
-            src={store.banner}
-            alt="Banner"
-            className="w-full h-40 object-cover"
-          />
+          <img src={store.banner} alt="Banner" className="w-full h-40 object-cover" />
         ) : (
           <div className="w-full h-40 bg-gray-200 flex items-center justify-center text-gray-500">
             Banner da loja
@@ -284,7 +233,7 @@ export function Home() {
                         className="bg-white rounded-lg shadow-sm overflow-hidden flex hover:shadow-md transition-shadow"
                       >
                         <img
-                          src={product.image}
+                          src={product.image || 'https://via.placeholder.com/200x200?text=Produto'}
                           alt={product.name}
                           className="w-28 h-28 object-cover"
                         />
@@ -293,7 +242,7 @@ export function Home() {
                           <div>
                             <h3 className="font-medium">{product.name}</h3>
                             <p className="text-lg font-semibold text-[#EA1D2C] mt-1">
-                              R$ {product.price.toFixed(2)}
+                              {formatMoney(product.price)}
                             </p>
                           </div>
 
@@ -318,7 +267,9 @@ export function Home() {
             <div className="fixed bottom-4 right-4 md:bottom-8 md:right-8 z-30">
               <Button
                 size="lg"
-                onClick={() => navigate('/cart')}
+                onClick={() =>
+                  navigate(store.slug ? `/cart?store=${store.id}` : '/cart')
+                }
                 className="rounded-full shadow-lg relative bg-[#EA1D2C] hover:bg-[#D01929]"
               >
                 <ShoppingCart className="w-5 h-5 mr-2" />
