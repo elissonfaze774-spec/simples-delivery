@@ -96,32 +96,6 @@ export function Login() {
               Acompanhe pedidos, organize produtos, ajuste cupons e mantenha sua
               operação em dia com o mesmo visual premium do painel do seu SaaS.
             </p>
-
-            <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="rounded-3xl border border-red-500/15 bg-black/45 p-5 shadow-[0_0_0_1px_rgba(255,0,51,0.04)] backdrop-blur-sm">
-                <p className="text-sm text-zinc-400">Pedidos</p>
-                <p className="mt-2 text-3xl font-black text-white">100%</p>
-                <p className="mt-1 text-xs text-zinc-500">
-                  Controle centralizado
-                </p>
-              </div>
-
-              <div className="rounded-3xl border border-red-500/15 bg-black/45 p-5 shadow-[0_0_0_1px_rgba(255,0,51,0.04)] backdrop-blur-sm">
-                <p className="text-sm text-zinc-400">Produtos</p>
-                <p className="mt-2 text-3xl font-black text-white">Full</p>
-                <p className="mt-1 text-xs text-zinc-500">
-                  Gestão rápida e limpa
-                </p>
-              </div>
-
-              <div className="rounded-3xl border border-red-500/15 bg-black/45 p-5 shadow-[0_0_0_1px_rgba(255,0,51,0.04)] backdrop-blur-sm">
-                <p className="text-sm text-zinc-400">Receita</p>
-                <p className="mt-2 text-3xl font-black text-emerald-400">R$</p>
-                <p className="mt-1 text-xs text-zinc-500">
-                  Visual igual ao painel
-                </p>
-              </div>
-            </div>
           </div>
         </div>
 
