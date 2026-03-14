@@ -88,6 +88,18 @@ export function AdminSettings() {
 
   const currentDeliveryFee = Number((resolvedStore as any).deliveryFee || 0);
 
+  const currentLogoFallback = String((resolvedStore as any).logo || '').trim();
+  const currentLogoUrl = String(
+    (resolvedStore as any).logoUrl ||
+      (resolvedStore as any).logo_url ||
+      ''
+  ).trim();
+  const currentBanner = String(
+    (resolvedStore as any).banner ||
+      (resolvedStore as any).banner_url ||
+      ''
+  ).trim();
+
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(storeLink);
@@ -118,34 +130,36 @@ export function AdminSettings() {
       .replace(/\./g, '')
       .replace(',', '.');
 
-    const payload = {
-      name: String(formData.get('name') || '').trim(),
-      logo: String(formData.get('logo') || '').trim(),
-      logoUrl: String(formData.get('logoUrl') || '').trim(),
-      banner: String(formData.get('banner') || '').trim(),
-      whatsapp: String(formData.get('whatsapp') || '').replace(/\D/g, ''),
-      deliveryFee: Math.max(Number(rawDeliveryFee || 0), 0),
-    };
+    const name = String(formData.get('name') || '').trim();
+    const logo = String(formData.get('logo') || '').trim();
+    const logoUrl = String(formData.get('logoUrl') || '').trim();
+    const banner = String(formData.get('banner') || '').trim();
+    const whatsapp = String(formData.get('whatsapp') || '').replace(/\D/g, '');
+    const deliveryFee = Math.max(Number(rawDeliveryFee || 0), 0);
 
-    if (!payload.name) {
+    if (!name) {
       toast.error('Informe o nome da loja.');
       return;
     }
 
-    if (!payload.logo) {
-      toast.error('Informe a logo fallback.');
-      return;
-    }
-
-    if (!payload.whatsapp) {
+    if (!whatsapp) {
       toast.error('Informe o WhatsApp.');
       return;
     }
 
-    if (!Number.isFinite(payload.deliveryFee)) {
+    if (!Number.isFinite(deliveryFee)) {
       toast.error('Informe uma taxa de entrega válida.');
       return;
     }
+
+    const payload: any = {
+      name,
+      whatsapp,
+      deliveryFee,
+      logo: logo || currentLogoFallback || '🍔',
+      logoUrl: logoUrl || currentLogoUrl || '',
+      banner: banner || currentBanner || '',
+    };
 
     setSaving(true);
 
@@ -267,8 +281,7 @@ export function AdminSettings() {
                 <Input
                   id="logo"
                   name="logo"
-                  defaultValue={(resolvedStore as any).logo || ''}
-                  required
+                  defaultValue={currentLogoFallback || '🍔'}
                   className="mt-2 h-12 rounded-2xl"
                 />
               </div>
@@ -305,7 +318,8 @@ export function AdminSettings() {
               </div>
 
               <div className="flex items-end rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                Valor atual da entrega: <span className="ml-2 font-semibold">{formatMoney(currentDeliveryFee)}</span>
+                Valor atual da entrega:{' '}
+                <span className="ml-2 font-semibold">{formatMoney(currentDeliveryFee)}</span>
               </div>
 
               <div className="md:col-span-2">
@@ -315,7 +329,7 @@ export function AdminSettings() {
                   name="logoUrl"
                   type="url"
                   placeholder="https://exemplo.com/logo.png"
-                  defaultValue={(resolvedStore as any).logoUrl || ''}
+                  defaultValue={currentLogoUrl}
                   className="mt-2 h-12 rounded-2xl"
                 />
               </div>
@@ -326,8 +340,8 @@ export function AdminSettings() {
                   id="banner"
                   name="banner"
                   type="url"
-                  defaultValue={(resolvedStore as any).banner || ''}
-                  required
+                  placeholder="https://exemplo.com/banner.png"
+                  defaultValue={currentBanner}
                   className="mt-2 h-12 rounded-2xl"
                 />
               </div>
