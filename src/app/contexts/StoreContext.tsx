@@ -4,11 +4,9 @@ import React, {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react';
 import { supabase } from '../lib/supabase';
-import { canAddProduct } from '../lib/planLimits';
 import { Store, Product, Category, Coupon, Plan } from '../types';
 
 interface StoreContextType {
@@ -39,17 +37,14 @@ interface StoreContextType {
   addStore: (name: string, email: string) => Promise<Store>;
   suspendStore: (id: string) => Promise<void>;
   deleteStore: (id: string) => Promise<void>;
-  updatePlan: (planId: 'iniciante' | 'pro' | 'premium', data: Partial<Plan>) => Promise<void>;
+  updatePlan: (
+    planId: 'iniciante' | 'pro' | 'premium',
+    data: Partial<Plan>
+  ) => Promise<void>;
   reloadStoreData: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
-
-const STORE_CACHE_KEY = 'saas:stores';
-const PRODUCTS_CACHE_KEY = 'saas:products';
-const CATEGORIES_CACHE_KEY = 'saas:categories';
-const COUPONS_CACHE_KEY = 'saas:coupons';
-const PLANS_CACHE_KEY = 'saas:plans';
 
 const DEFAULT_PLANS: Plan[] = [
   {
@@ -101,85 +96,8 @@ const DEFAULT_PLANS: Plan[] = [
   },
 ];
 
-async function withTimeout<T>(fn: () => Promise<T>, ms = 20000): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('Tempo esgotado na requisição')), ms);
-
-    fn()
-      .then((value) => {
-        clearTimeout(timer);
-        resolve(value);
-      })
-      .catch((error) => {
-        clearTimeout(timer);
-        reject(error);
-      });
-  });
-}
-
 function normalizeEmail(email?: string | null) {
   return String(email ?? '').trim().toLowerCase();
-}
-
-function asArray<T>(value: unknown): T[] {
-  return Array.isArray(value) ? (value as T[]) : [];
-}
-
-function getLocalStorageItem(key: string) {
-  try {
-    if (typeof window === 'undefined') return null;
-    return window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function setLocalStorageItem(key: string, value: string) {
-  try {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(key, value);
-  } catch {
-    //
-  }
-}
-
-function removeLocalStorageItem(key: string) {
-  try {
-    if (typeof window === 'undefined') return;
-    window.localStorage.removeItem(key);
-  } catch {
-    //
-  }
-}
-
-function getCachedData<T>(key: string): T[] | null {
-  try {
-    const raw = getLocalStorageItem(key);
-    return raw ? (JSON.parse(raw) as T[]) : null;
-  } catch {
-    return null;
-  }
-}
-
-function setCachedData<T>(key: string, list: T[] | null) {
-  try {
-    if (!list) {
-      removeLocalStorageItem(key);
-      return;
-    }
-    setLocalStorageItem(key, JSON.stringify(list));
-  } catch {
-    //
-  }
-}
-
-function buildStoreUrl(slug?: string) {
-  const origin =
-    typeof window !== 'undefined' && window.location?.origin
-      ? window.location.origin
-      : 'https://meurestaurante.com';
-
-  return `${origin}/loja/${encodeURIComponent(slug || '')}`;
 }
 
 function slugify(value: string) {
@@ -191,71 +109,48 @@ function slugify(value: string) {
     .replace(/(^-|-$)/g, '');
 }
 
-function mapStorePlanToLimitPlan(plan?: string | null): 'simples' | 'pro' | 'premium' {
-  const normalized = String(plan || '').trim().toLowerCase();
+function buildStoreUrl(slug?: string) {
+  const origin =
+    typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : 'https://meurestaurante.com';
 
-  if (normalized === 'premium') return 'premium';
-  if (normalized === 'pro') return 'pro';
-  return 'simples';
-}
-
-function getHumanPlanName(plan?: string | null) {
-  const normalized = String(plan || '').trim().toLowerCase();
-
-  if (normalized === 'premium') return 'Premium';
-  if (normalized === 'pro') return 'Pro';
-  return 'Simples';
+  return `${origin}/loja/${encodeURIComponent(slug || '')}`;
 }
 
 function normalizeStore(store: any): Store {
   const slug = String(store?.slug || slugify(store?.name || '') || store?.id || '');
-
-  const suspended =
-    typeof store?.suspended === 'boolean'
-      ? store.suspended
-      : typeof store?.isSuspended === 'boolean'
-      ? store.isSuspended
-      : false;
-
-  const activeFromDb =
-    typeof store?.active === 'boolean'
-      ? store.active
-      : typeof store?.is_active === 'boolean'
-      ? store.is_active
-      : typeof store?.isActive === 'boolean'
-      ? store.isActive
-      : true;
-
-  const active = suspended ? false : activeFromDb;
-
-  const adminEmail = normalizeEmail(store?.adminEmail ?? store?.admin_email);
-
-  const logoUrl = store?.logoUrl ?? store?.logo_url ?? store?.logo ?? '';
-  const banner = store?.banner ?? store?.banner_url ?? '';
-  const storeUrl = store?.storeUrl ?? store?.store_url ?? buildStoreUrl(slug);
-
   const rawPlan = String(store?.plan ?? store?.plan_id ?? 'iniciante').toLowerCase();
+
   const plan: 'iniciante' | 'pro' | 'premium' =
     rawPlan === 'pro' || rawPlan === 'premium' || rawPlan === 'iniciante'
       ? rawPlan
       : 'iniciante';
 
-  const deliveryFee = Number(store?.deliveryFee ?? store?.delivery_fee ?? 0);
-
   return {
     id: String(store?.id ?? ''),
     name: String(store?.name ?? ''),
     slug,
-    logo: String(store?.logo ?? logoUrl ?? ''),
-    banner: String(banner ?? ''),
+    logo: String(store?.logo ?? store?.logo_url ?? ''),
+    banner: String(store?.banner ?? store?.banner_url ?? ''),
     whatsapp: String(store?.whatsapp ?? ''),
-    active,
-    adminEmail,
-    logoUrl: String(logoUrl || ''),
-    storeUrl: String(storeUrl || ''),
+    active:
+      typeof store?.active === 'boolean'
+        ? store.active
+        : typeof store?.is_active === 'boolean'
+        ? store.is_active
+        : true,
+    adminEmail: normalizeEmail(store?.adminEmail ?? store?.admin_email),
+    logoUrl: String(store?.logo_url ?? store?.logoUrl ?? store?.logo ?? ''),
+    storeUrl: String(store?.store_url ?? store?.storeUrl ?? buildStoreUrl(slug)),
     plan,
-    suspended,
-    deliveryFee: Number.isFinite(deliveryFee) ? deliveryFee : 0,
+    suspended:
+      typeof store?.suspended === 'boolean'
+        ? store.suspended
+        : typeof store?.isSuspended === 'boolean'
+        ? store.isSuspended
+        : false,
+    deliveryFee: Number(store?.deliveryFee ?? store?.delivery_fee ?? 0),
   };
 }
 
@@ -305,8 +200,9 @@ function normalizeCoupon(coupon: any): Coupon {
 
 function normalizePlan(plan: any): Plan {
   const rawId = String(plan?.code ?? plan?.id ?? 'iniciante').toLowerCase();
+
   const id: 'iniciante' | 'pro' | 'premium' =
-    rawId === 'premium' || rawId === 'pro' || rawId === 'iniciante'
+    rawId === 'iniciante' || rawId === 'pro' || rawId === 'premium'
       ? rawId
       : 'iniciante';
 
@@ -322,192 +218,11 @@ function normalizePlan(plan: any): Plan {
   };
 }
 
-function removeId<T extends Record<string, any>>(payload: T): T {
-  const copy = { ...payload };
-  delete copy.id;
-  return copy;
-}
-
-function normalizeDbPayload<T extends Record<string, any>>(payload: T): Record<string, any> {
-  const copy: Record<string, any> = { ...payload };
-
-  if (copy.storeId !== undefined && copy.store_id === undefined) {
-    copy.store_id = copy.storeId;
-  }
-
-  if (copy.categoryId !== undefined && copy.category_id === undefined) {
-    copy.category_id = copy.categoryId;
-  }
-
-  if (copy.adminEmail !== undefined && copy.admin_email === undefined) {
-    copy.admin_email = normalizeEmail(copy.adminEmail);
-  }
-
-  if (copy.active !== undefined && copy.is_active === undefined) {
-    copy.is_active = copy.active;
-  }
-
-  if (copy.logoUrl !== undefined && copy.logo_url === undefined) {
-    copy.logo_url = copy.logoUrl;
-  }
-
-  if (copy.storeUrl !== undefined && copy.store_url === undefined) {
-    copy.store_url = copy.storeUrl;
-  }
-
-  if (copy.deliveryFee !== undefined && copy.delivery_fee === undefined) {
-    copy.delivery_fee = Number(copy.deliveryFee || 0);
-  }
-
-  if (copy.maxProducts !== undefined && copy.max_products === undefined) {
-    copy.max_products = copy.maxProducts;
-  }
-
-  if (copy.maxOrders !== undefined && copy.max_orders === undefined) {
-    copy.max_orders = copy.maxOrders;
-  }
-
-  if (copy.order !== undefined && copy.sort_order === undefined) {
-    copy.sort_order = copy.order;
-  }
-
-  if (copy.available !== undefined && copy.is_available === undefined) {
-    copy.is_available = copy.available;
-  }
-
-  if (copy.slug !== undefined) {
-    copy.slug = slugify(String(copy.slug || ''));
-  }
-
-  if (copy.suspended !== undefined) {
-    copy.suspended = Boolean(copy.suspended);
-    if (copy.is_active === undefined) {
-      copy.is_active = !copy.suspended;
-    }
-  }
-
-  delete copy.storeId;
-  delete copy.categoryId;
-  delete copy.adminEmail;
-  delete copy.active;
-  delete copy.logoUrl;
-  delete copy.storeUrl;
-  delete copy.deliveryFee;
-  delete copy.maxProducts;
-  delete copy.maxOrders;
-  delete copy.available;
-  delete copy.order;
-
-  return copy;
-}
-
-function sanitizePayload(payload: any) {
-  if (!payload || typeof payload !== 'object') return payload;
-
-  const copy = { ...payload };
-
-  Object.keys(copy).forEach((key) => {
-    if (copy[key] === undefined) {
-      delete copy[key];
-    }
-  });
-
-  if (
-    typeof copy.image === 'string' &&
-    copy.image.startsWith('data:') &&
-    copy.image.length > 2000
-  ) {
-    delete copy.image;
-  }
-
-  return copy;
-}
-
-function extractMissingColumnMessage(err: any): string | null {
-  try {
-    const msg = String(err?.message || err?.details || err?.error_description || err || '');
-
-    let m = msg.match(/column\s+"?(\w+)"?\s+does not exist/i);
-    if (m?.[1]) return m[1];
-
-    m = msg.match(/Could not find the '?"?(\w+)'?"? column/i);
-    if (m?.[1]) return m[1];
-
-    m = msg.match(/'?(\w+)'? column/i);
-    if (m?.[1] && /does not exist|not found/i.test(msg)) return m[1];
-
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-async function safeInsert(table: string, payload: any) {
-  try {
-    const cleaned = sanitizePayload(payload);
-    const res = await withTimeout(
-      async () => await supabase.from(table).insert(cleaned).select('*'),
-      20000
-    );
-
-    if ((res as any).error) throw (res as any).error;
-    return (res as any).data;
-  } catch (err: any) {
-    const col = extractMissingColumnMessage(err);
-
-    if (col && payload && Object.prototype.hasOwnProperty.call(payload, col)) {
-      const copy = { ...payload };
-      delete copy[col];
-
-      const res2 = await withTimeout(
-        async () => await supabase.from(table).insert(sanitizePayload(copy)).select('*'),
-        20000
-      );
-
-      if ((res2 as any).error) throw (res2 as any).error;
-      return (res2 as any).data;
-    }
-
-    throw err;
-  }
-}
-
-async function safeUpdate(table: string, idField: string, idValue: any, payload: any) {
-  try {
-    const cleaned = sanitizePayload(payload);
-    const res = await withTimeout(
-      async () => await supabase.from(table).update(cleaned).eq(idField, idValue).select('*'),
-      20000
-    );
-
-    if ((res as any).error) throw (res as any).error;
-    return (res as any).data;
-  } catch (err: any) {
-    const col = extractMissingColumnMessage(err);
-
-    if (col && payload && Object.prototype.hasOwnProperty.call(payload, col)) {
-      const copy = { ...payload };
-      delete copy[col];
-
-      const res2 = await withTimeout(
-        async () =>
-          await supabase.from(table).update(sanitizePayload(copy)).eq(idField, idValue).select('*'),
-        20000
-      );
-
-      if ((res2 as any).error) throw (res2 as any).error;
-      return (res2 as any).data;
-    }
-
-    throw err;
-  }
-}
-
 function mergePlansWithDefaults(list: Plan[]): Plan[] {
-  const normalized = asArray<Plan>(list).map((item: any) => normalizePlan(item));
+  const normalized = Array.isArray(list) ? list.map((item: any) => normalizePlan(item)) : [];
 
   return DEFAULT_PLANS.map((defaultPlan) => {
-    const dbPlan = normalized.find((plan) => String(plan.id) === String(defaultPlan.id));
+    const dbPlan = normalized.find((plan) => plan.id === defaultPlan.id);
     return dbPlan ? { ...defaultPlan, ...dbPlan } : defaultPlan;
   });
 }
@@ -519,208 +234,42 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [plans, setPlans] = useState<Plan[]>(DEFAULT_PLANS);
   const [isLoaded, setIsLoaded] = useState(false);
-  const isMounted = useRef(true);
-
-  const applyStores = useCallback((list: Store[]) => {
-    const normalized = asArray<Store>(list).map((item: any) => normalizeStore(item));
-    if (!isMounted.current) return;
-    setStores(normalized);
-    setCachedData(STORE_CACHE_KEY, normalized);
-  }, []);
-
-  const applyProducts = useCallback((list: Product[]) => {
-    const normalized = asArray<Product>(list).map((item: any) => normalizeProduct(item));
-    if (!isMounted.current) return;
-    setProducts(normalized);
-    setCachedData(PRODUCTS_CACHE_KEY, normalized);
-  }, []);
-
-  const applyCategories = useCallback((list: Category[]) => {
-    const normalized = asArray<Category>(list).map((item: any) => normalizeCategory(item));
-    if (!isMounted.current) return;
-    setCategories(normalized);
-    setCachedData(CATEGORIES_CACHE_KEY, normalized);
-  }, []);
-
-  const applyCoupons = useCallback((list: Coupon[]) => {
-    const normalized = asArray<Coupon>(list).map((item: any) => normalizeCoupon(item));
-    if (!isMounted.current) return;
-    setCoupons(normalized);
-    setCachedData(COUPONS_CACHE_KEY, normalized);
-  }, []);
-
-  const applyPlans = useCallback((list: Plan[]) => {
-    const mergedPlans = mergePlansWithDefaults(list);
-    if (!isMounted.current) return;
-    setPlans(mergedPlans);
-    setCachedData(PLANS_CACHE_KEY, mergedPlans);
-  }, []);
 
   const reloadStoreData = useCallback(async () => {
     try {
-      const storesRes = await withTimeout(
-        async () => await supabase.from('stores').select('*').order('created_at', { ascending: true }),
-        15000
-      );
-
-      if (storesRes.error) {
-        throw storesRes.error;
-      }
-
-      applyStores(asArray<Store>(storesRes.data));
-
-      const [categoriesRes, productsRes, couponsRes, plansRes] = await Promise.allSettled([
-        withTimeout(
-          async () => await supabase.from('categories').select('*').order('created_at', { ascending: true }),
-          15000
-        ),
-        withTimeout(
-          async () => await supabase.from('products').select('*').order('created_at', { ascending: true }),
-          15000
-        ),
-        withTimeout(
-          async () => await supabase.from('coupons').select('*').order('created_at', { ascending: true }),
-          15000
-        ),
-        withTimeout(
-          async () => await supabase.from('plans').select('*').order('created_at', { ascending: true }),
-          15000
-        ),
+      const [storesRes, productsRes, categoriesRes, couponsRes, plansRes] = await Promise.all([
+        supabase.from('stores').select('*').order('created_at', { ascending: true }),
+        supabase.from('products').select('*').order('created_at', { ascending: true }),
+        supabase.from('categories').select('*').order('created_at', { ascending: true }),
+        supabase.from('coupons').select('*').order('created_at', { ascending: true }),
+        supabase.from('plans').select('*').order('created_at', { ascending: true }),
       ]);
 
-      if (categoriesRes.status === 'fulfilled' && !categoriesRes.value.error) {
-        applyCategories(asArray<Category>(categoriesRes.value.data));
-      }
+      if (storesRes.error) throw storesRes.error;
+      if (productsRes.error) throw productsRes.error;
+      if (categoriesRes.error) throw categoriesRes.error;
+      if (couponsRes.error) throw couponsRes.error;
 
-      if (productsRes.status === 'fulfilled' && !productsRes.value.error) {
-        applyProducts(asArray<Product>(productsRes.value.data));
-      }
+      setStores((storesRes.data || []).map(normalizeStore));
+      setProducts((productsRes.data || []).map(normalizeProduct));
+      setCategories((categoriesRes.data || []).map(normalizeCategory));
+      setCoupons((couponsRes.data || []).map(normalizeCoupon));
 
-      if (couponsRes.status === 'fulfilled' && !couponsRes.value.error) {
-        applyCoupons(asArray<Coupon>(couponsRes.value.data));
-      }
-
-      if (plansRes.status === 'fulfilled' && !plansRes.value.error) {
-        applyPlans(asArray<Plan>(plansRes.value.data));
+      if (!plansRes.error && plansRes.data) {
+        setPlans(mergePlansWithDefaults(plansRes.data as any));
       } else {
-        applyPlans(DEFAULT_PLANS);
-      }
-
-      if (isMounted.current) {
-        setIsLoaded(true);
+        setPlans(DEFAULT_PLANS);
       }
     } catch (error) {
-      console.error('Erro ao recarregar dados da loja:', error);
-
-      const cachedStores = getCachedData<Store>(STORE_CACHE_KEY);
-      const cachedProducts = getCachedData<Product>(PRODUCTS_CACHE_KEY);
-      const cachedCategories = getCachedData<Category>(CATEGORIES_CACHE_KEY);
-      const cachedCoupons = getCachedData<Coupon>(COUPONS_CACHE_KEY);
-      const cachedPlans = getCachedData<Plan>(PLANS_CACHE_KEY);
-
-      if (cachedStores) applyStores(cachedStores);
-      if (cachedProducts) applyProducts(cachedProducts);
-      if (cachedCategories) applyCategories(cachedCategories);
-      if (cachedCoupons) applyCoupons(cachedCoupons);
-
-      if (cachedPlans?.length) {
-        applyPlans(cachedPlans);
-      } else {
-        applyPlans(DEFAULT_PLANS);
-      }
-
-      if (isMounted.current) {
-        setIsLoaded(true);
-      }
-    }
-  }, [applyCategories, applyCoupons, applyPlans, applyProducts, applyStores]);
-
-  useEffect(() => {
-    isMounted.current = true;
-
-    const cachedStores = getCachedData<Store>(STORE_CACHE_KEY);
-    const cachedProducts = getCachedData<Product>(PRODUCTS_CACHE_KEY);
-    const cachedCategories = getCachedData<Category>(CATEGORIES_CACHE_KEY);
-    const cachedCoupons = getCachedData<Coupon>(COUPONS_CACHE_KEY);
-    const cachedPlans = getCachedData<Plan>(PLANS_CACHE_KEY);
-
-    if (cachedStores?.length) {
-      setStores(cachedStores.map((item: any) => normalizeStore(item)));
-    }
-
-    if (cachedProducts?.length) {
-      setProducts(cachedProducts.map((item: any) => normalizeProduct(item)));
-    }
-
-    if (cachedCategories?.length) {
-      setCategories(cachedCategories.map((item: any) => normalizeCategory(item)));
-    }
-
-    if (cachedCoupons?.length) {
-      setCoupons(cachedCoupons.map((item: any) => normalizeCoupon(item)));
-    }
-
-    if (cachedPlans?.length) {
-      setPlans(mergePlansWithDefaults(cachedPlans));
-    } else {
+      console.error('Erro ao carregar StoreContext:', error);
       setPlans(DEFAULT_PLANS);
-    }
-
-    if (
-      cachedStores?.length ||
-      cachedProducts?.length ||
-      cachedCategories?.length ||
-      cachedCoupons?.length ||
-      cachedPlans?.length
-    ) {
+    } finally {
       setIsLoaded(true);
     }
+  }, []);
 
+  useEffect(() => {
     void reloadStoreData();
-
-    const storesChannel = supabase
-      .channel('stores-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'stores' }, async () => {
-        await reloadStoreData();
-      })
-      .subscribe();
-
-    const productsChannel = supabase
-      .channel('products-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, async () => {
-        await reloadStoreData();
-      })
-      .subscribe();
-
-    const categoriesChannel = supabase
-      .channel('categories-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, async () => {
-        await reloadStoreData();
-      })
-      .subscribe();
-
-    const couponsChannel = supabase
-      .channel('coupons-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'coupons' }, async () => {
-        await reloadStoreData();
-      })
-      .subscribe();
-
-    const plansChannel = supabase
-      .channel('plans-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'plans' }, async () => {
-        await reloadStoreData();
-      })
-      .subscribe();
-
-    return () => {
-      isMounted.current = false;
-      void supabase.removeChannel(storesChannel);
-      void supabase.removeChannel(productsChannel);
-      void supabase.removeChannel(categoriesChannel);
-      void supabase.removeChannel(couponsChannel);
-      void supabase.removeChannel(plansChannel);
-    };
   }, [reloadStoreData]);
 
   const getStore = useCallback(
@@ -782,306 +331,161 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const updateStore = useCallback(
     async (id: string, data: Partial<Store>) => {
-      const previous = [...stores];
+      const payload: any = {};
 
-      const optimistic = previous.map((store) => {
-        if (String(store.id) !== String(id)) return store;
+      if (data.name !== undefined) payload.name = data.name;
+      if (data.slug !== undefined) payload.slug = slugify(data.slug);
+      if (data.logo !== undefined) payload.logo = data.logo;
+      if (data.banner !== undefined) payload.banner = data.banner;
+      if (data.whatsapp !== undefined) payload.whatsapp = data.whatsapp;
+      if (data.active !== undefined) payload.is_active = data.active;
+      if (data.adminEmail !== undefined) payload.admin_email = normalizeEmail(data.adminEmail);
+      if (data.logoUrl !== undefined) payload.logo_url = data.logoUrl;
+      if (data.storeUrl !== undefined) payload.store_url = data.storeUrl;
+      if (data.plan !== undefined) payload.plan = data.plan;
+      if ((data as any).suspended !== undefined) payload.suspended = (data as any).suspended;
+      if (data.deliveryFee !== undefined) payload.delivery_fee = Number(data.deliveryFee || 0);
 
-        const nextSuspended =
-          typeof (data as any).suspended === 'boolean' ? Boolean((data as any).suspended) : store.suspended;
+      const { error } = await supabase.from('stores').update(payload).eq('id', id);
+      if (error) throw error;
 
-        const nextActive =
-          typeof data.active === 'boolean'
-            ? data.active
-            : nextSuspended
-            ? false
-            : store.active;
-
-        return normalizeStore({
-          ...store,
-          ...data,
-          active: nextActive,
-          suspended: nextSuspended,
-        });
-      });
-
-      setStores(optimistic);
-      setCachedData(STORE_CACHE_KEY, optimistic);
-
-      try {
-        const payload = normalizeDbPayload({
-          ...data,
-          deliveryFee:
-            data.deliveryFee !== undefined ? Number(data.deliveryFee || 0) : data.deliveryFee,
-          active:
-            typeof data.active === 'boolean'
-              ? data.active
-              : typeof (data as any).suspended === 'boolean'
-              ? !(data as any).suspended
-              : undefined,
-          adminEmail:
-            data.adminEmail !== undefined ? normalizeEmail(data.adminEmail) : data.adminEmail,
-        } as any);
-
-        await safeUpdate('stores', 'id', id, payload);
-        await reloadStoreData();
-      } catch (error) {
-        setStores(previous);
-        setCachedData(STORE_CACHE_KEY, previous);
-        console.error('Erro ao atualizar loja:', error);
-        throw error;
-      }
+      await reloadStoreData();
     },
-    [reloadStoreData, stores]
+    [reloadStoreData]
   );
 
   const addProduct = useCallback(
     async (product: Product) => {
-      const storeId = String(product.storeId || '');
-      const store = stores.find((item) => String(item.id) === storeId);
+      const payload = {
+        name: product.name,
+        price: Number(product.price || 0),
+        image: product.image || '',
+        store_id: product.storeId,
+        category_id: product.categoryId || null,
+        is_available: product.available ?? true,
+      };
 
-      if (!store) {
-        throw new Error('Loja não encontrada para cadastrar o produto.');
-      }
+      const { error } = await supabase.from('products').insert(payload);
+      if (error) throw error;
 
-      const currentProductsCount = products.filter(
-        (item) => String(item.storeId) === storeId
-      ).length;
-
-      const planCheck = canAddProduct(
-        mapStorePlanToLimitPlan((store as any).plan),
-        currentProductsCount
-      );
-
-      if (!planCheck.allowed) {
-        const currentPlanName = getHumanPlanName((store as any).plan);
-        const upgradeText =
-          currentPlanName === 'Simples'
-            ? 'Faça upgrade para Pro ou Premium para liberar mais produtos.'
-            : currentPlanName === 'Pro'
-            ? 'Faça upgrade para Premium para liberar produtos ilimitados.'
-            : 'Seu plano atual atingiu o limite.';
-
-        throw new Error(
-          `${planCheck.reason || 'Limite de produtos atingido.'} ${upgradeText}`
-        );
-      }
-
-      const optimisticItem = normalizeProduct(product);
-      const previous = [...products];
-      const optimistic = [...previous, optimisticItem];
-
-      setProducts(optimistic);
-      setCachedData(PRODUCTS_CACHE_KEY, optimistic);
-
-      try {
-        const payload = normalizeDbPayload(removeId(product as any));
-        await safeInsert('products', payload);
-        await reloadStoreData();
-      } catch (error) {
-        setProducts(previous);
-        setCachedData(PRODUCTS_CACHE_KEY, previous);
-        console.error('Erro ao adicionar produto:', error);
-        throw error;
-      }
+      await reloadStoreData();
     },
-    [products, reloadStoreData, stores]
+    [reloadStoreData]
   );
 
   const updateProduct = useCallback(
     async (id: string, data: Partial<Product>) => {
-      const previous = [...products];
-      const optimistic = previous.map((product) =>
-        String(product.id) === String(id) ? normalizeProduct({ ...product, ...data }) : product
-      );
+      const payload: any = {};
 
-      setProducts(optimistic);
-      setCachedData(PRODUCTS_CACHE_KEY, optimistic);
+      if (data.name !== undefined) payload.name = data.name;
+      if (data.price !== undefined) payload.price = Number(data.price || 0);
+      if (data.image !== undefined) payload.image = data.image;
+      if (data.storeId !== undefined) payload.store_id = data.storeId;
+      if (data.categoryId !== undefined) payload.category_id = data.categoryId || null;
+      if (data.available !== undefined) payload.is_available = data.available;
 
-      try {
-        await safeUpdate('products', 'id', id, normalizeDbPayload(data as any));
-        await reloadStoreData();
-      } catch (error) {
-        setProducts(previous);
-        setCachedData(PRODUCTS_CACHE_KEY, previous);
-        console.error('Erro ao atualizar produto:', error);
-        throw error;
-      }
+      const { error } = await supabase.from('products').update(payload).eq('id', id);
+      if (error) throw error;
+
+      await reloadStoreData();
     },
-    [products, reloadStoreData]
+    [reloadStoreData]
   );
 
   const deleteProduct = useCallback(
     async (id: string) => {
-      const previous = [...products];
-      const optimistic = previous.filter((product) => String(product.id) !== String(id));
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) throw error;
 
-      setProducts(optimistic);
-      setCachedData(PRODUCTS_CACHE_KEY, optimistic);
-
-      try {
-        const { error } = await withTimeout(
-          async () => await supabase.from('products').delete().eq('id', id),
-          20000
-        );
-
-        if (error) throw error;
-
-        await reloadStoreData();
-      } catch (error) {
-        setProducts(previous);
-        setCachedData(PRODUCTS_CACHE_KEY, previous);
-        console.error('Erro ao deletar produto:', error);
-        throw error;
-      }
+      await reloadStoreData();
     },
-    [products, reloadStoreData]
+    [reloadStoreData]
   );
 
   const addCategory = useCallback(
     async (category: Category) => {
-      const optimisticItem = normalizeCategory(category);
-      const previous = [...categories];
-      const optimistic = [...previous, optimisticItem];
+      const payload = {
+        name: category.name,
+        store_id: category.storeId,
+        sort_order: Number(category.order || 0),
+      };
 
-      setCategories(optimistic);
-      setCachedData(CATEGORIES_CACHE_KEY, optimistic);
+      const { error } = await supabase.from('categories').insert(payload);
+      if (error) throw error;
 
-      try {
-        const payload = normalizeDbPayload(removeId(category as any));
-        await safeInsert('categories', payload);
-        await reloadStoreData();
-      } catch (error) {
-        setCategories(previous);
-        setCachedData(CATEGORIES_CACHE_KEY, previous);
-        console.error('Erro ao adicionar categoria:', error);
-        throw error;
-      }
+      await reloadStoreData();
     },
-    [categories, reloadStoreData]
+    [reloadStoreData]
   );
 
   const updateCategory = useCallback(
     async (id: string, data: Partial<Category>) => {
-      const previous = [...categories];
-      const optimistic = previous.map((category) =>
-        String(category.id) === String(id) ? normalizeCategory({ ...category, ...data }) : category
-      );
+      const payload: any = {};
 
-      setCategories(optimistic);
-      setCachedData(CATEGORIES_CACHE_KEY, optimistic);
+      if (data.name !== undefined) payload.name = data.name;
+      if (data.storeId !== undefined) payload.store_id = data.storeId;
+      if (data.order !== undefined) payload.sort_order = Number(data.order || 0);
 
-      try {
-        await safeUpdate('categories', 'id', id, normalizeDbPayload(data as any));
-        await reloadStoreData();
-      } catch (error) {
-        setCategories(previous);
-        setCachedData(CATEGORIES_CACHE_KEY, previous);
-        console.error('Erro ao atualizar categoria:', error);
-        throw error;
-      }
+      const { error } = await supabase.from('categories').update(payload).eq('id', id);
+      if (error) throw error;
+
+      await reloadStoreData();
     },
-    [categories, reloadStoreData]
+    [reloadStoreData]
   );
 
   const deleteCategory = useCallback(
     async (id: string) => {
-      const previous = [...categories];
-      const optimistic = previous.filter((category) => String(category.id) !== String(id));
+      const { error } = await supabase.from('categories').delete().eq('id', id);
+      if (error) throw error;
 
-      setCategories(optimistic);
-      setCachedData(CATEGORIES_CACHE_KEY, optimistic);
-
-      try {
-        const { error } = await withTimeout(
-          async () => await supabase.from('categories').delete().eq('id', id),
-          20000
-        );
-
-        if (error) throw error;
-
-        await reloadStoreData();
-      } catch (error) {
-        setCategories(previous);
-        setCachedData(CATEGORIES_CACHE_KEY, previous);
-        console.error('Erro ao deletar categoria:', error);
-        throw error;
-      }
+      await reloadStoreData();
     },
-    [categories, reloadStoreData]
+    [reloadStoreData]
   );
 
   const addCoupon = useCallback(
     async (coupon: Coupon) => {
-      const optimisticItem = normalizeCoupon(coupon);
-      const previous = [...coupons];
-      const optimistic = [...previous, optimisticItem];
+      const payload = {
+        code: coupon.code,
+        discount: Number(coupon.discount || 0),
+        is_active: coupon.active ?? true,
+        store_id: coupon.storeId,
+      };
 
-      setCoupons(optimistic);
-      setCachedData(COUPONS_CACHE_KEY, optimistic);
+      const { error } = await supabase.from('coupons').insert(payload);
+      if (error) throw error;
 
-      try {
-        const payload = normalizeDbPayload(removeId(coupon as any));
-        await safeInsert('coupons', payload);
-        await reloadStoreData();
-      } catch (error) {
-        setCoupons(previous);
-        setCachedData(COUPONS_CACHE_KEY, previous);
-        console.error('Erro ao adicionar cupom:', error);
-        throw error;
-      }
+      await reloadStoreData();
     },
-    [coupons, reloadStoreData]
+    [reloadStoreData]
   );
 
   const updateCoupon = useCallback(
     async (id: string, data: Partial<Coupon>) => {
-      const previous = [...coupons];
-      const optimistic = previous.map((coupon) =>
-        String(coupon.id) === String(id) ? normalizeCoupon({ ...coupon, ...data }) : coupon
-      );
+      const payload: any = {};
 
-      setCoupons(optimistic);
-      setCachedData(COUPONS_CACHE_KEY, optimistic);
+      if (data.code !== undefined) payload.code = data.code;
+      if (data.discount !== undefined) payload.discount = Number(data.discount || 0);
+      if (data.active !== undefined) payload.is_active = data.active;
+      if (data.storeId !== undefined) payload.store_id = data.storeId;
 
-      try {
-        await safeUpdate('coupons', 'id', id, normalizeDbPayload(data as any));
-        await reloadStoreData();
-      } catch (error) {
-        setCoupons(previous);
-        setCachedData(COUPONS_CACHE_KEY, previous);
-        console.error('Erro ao atualizar cupom:', error);
-        throw error;
-      }
+      const { error } = await supabase.from('coupons').update(payload).eq('id', id);
+      if (error) throw error;
+
+      await reloadStoreData();
     },
-    [coupons, reloadStoreData]
+    [reloadStoreData]
   );
 
   const deleteCoupon = useCallback(
     async (id: string) => {
-      const previous = [...coupons];
-      const optimistic = previous.filter((coupon) => String(coupon.id) !== String(id));
+      const { error } = await supabase.from('coupons').delete().eq('id', id);
+      if (error) throw error;
 
-      setCoupons(optimistic);
-      setCachedData(COUPONS_CACHE_KEY, optimistic);
-
-      try {
-        const { error } = await withTimeout(
-          async () => await supabase.from('coupons').delete().eq('id', id),
-          20000
-        );
-
-        if (error) throw error;
-
-        await reloadStoreData();
-      } catch (error) {
-        setCoupons(previous);
-        setCachedData(COUPONS_CACHE_KEY, previous);
-        console.error('Erro ao deletar cupom:', error);
-        throw error;
-      }
+      await reloadStoreData();
     },
-    [coupons, reloadStoreData]
+    [reloadStoreData]
   );
 
   const toggleStoreActive = useCallback(
@@ -1089,66 +493,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const current = stores.find((store) => String(store.id) === String(id));
       if (!current) throw new Error('Loja não encontrada.');
 
-      const nextActive = !current.active;
-
-      const previous = [...stores];
-      const optimistic = previous.map((store) =>
-        String(store.id) === String(id)
-          ? normalizeStore({
-              ...store,
-              active: nextActive,
-              suspended: false,
-            })
-          : store
-      );
-
-      setStores(optimistic);
-      setCachedData(STORE_CACHE_KEY, optimistic);
-
-      try {
-        await safeUpdate('stores', 'id', id, {
-          is_active: nextActive,
+      const { error } = await supabase
+        .from('stores')
+        .update({
+          is_active: !current.active,
           suspended: false,
-        });
-        await reloadStoreData();
-      } catch (error) {
-        setStores(previous);
-        setCachedData(STORE_CACHE_KEY, previous);
-        console.error('Erro ao alternar status da loja:', error);
-        throw error;
-      }
-    },
-    [reloadStoreData, stores]
-  );
+        })
+        .eq('id', id);
 
-  const suspendStore = useCallback(
-    async (id: string) => {
-      const previous = [...stores];
-      const optimistic = previous.map((store) =>
-        String(store.id) === String(id)
-          ? normalizeStore({
-              ...store,
-              active: false,
-              suspended: true,
-            })
-          : store
-      );
+      if (error) throw error;
 
-      setStores(optimistic);
-      setCachedData(STORE_CACHE_KEY, optimistic);
-
-      try {
-        await safeUpdate('stores', 'id', id, {
-          is_active: false,
-          suspended: true,
-        });
-        await reloadStoreData();
-      } catch (error) {
-        setStores(previous);
-        setCachedData(STORE_CACHE_KEY, previous);
-        console.error('Erro ao suspender loja:', error);
-        throw error;
-      }
+      await reloadStoreData();
     },
     [reloadStoreData, stores]
   );
@@ -1156,6 +511,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const addStore = useCallback(
     async (name: string, email: string): Promise<Store> => {
       const slug = slugify(name);
+
       const payload = {
         name: String(name || '').trim(),
         slug,
@@ -1170,89 +526,66 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         store_url: buildStoreUrl(slug),
       };
 
-      const data = await safeInsert('stores', payload);
-      const created = Array.isArray(data) ? data[0] : data;
-
-      if (!created) {
-        throw new Error('Não foi possível criar a loja.');
-      }
+      const { data, error } = await supabase.from('stores').insert(payload).select().single();
+      if (error) throw error;
+      if (!data) throw new Error('Não foi possível criar a loja.');
 
       await reloadStoreData();
-      return normalizeStore(created);
+      return normalizeStore(data);
+    },
+    [reloadStoreData]
+  );
+
+  const suspendStore = useCallback(
+    async (id: string) => {
+      const { error } = await supabase
+        .from('stores')
+        .update({
+          is_active: false,
+          suspended: true,
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await reloadStoreData();
     },
     [reloadStoreData]
   );
 
   const deleteStore = useCallback(
     async (id: string) => {
-      const previousStores = [...stores];
-      const previousProducts = [...products];
-      const previousCategories = [...categories];
-      const previousCoupons = [...coupons];
+      const { error: adminsError } = await supabase
+        .from('admins')
+        .update({ store_id: null })
+        .eq('store_id', id);
 
-      setStores(previousStores.filter((item) => String(item.id) !== String(id)));
-      setProducts(previousProducts.filter((item) => String(item.storeId) !== String(id)));
-      setCategories(previousCategories.filter((item) => String(item.storeId) !== String(id)));
-      setCoupons(previousCoupons.filter((item) => String(item.storeId) !== String(id)));
+      if (adminsError) throw adminsError;
 
-      try {
-        const { error: adminsError } = await withTimeout(
-          async () =>
-            await supabase
-              .from('admins')
-              .update({ store_id: null })
-              .eq('store_id', id),
-          20000
-        );
+      const { error: storeError } = await supabase.from('stores').delete().eq('id', id);
+      if (storeError) throw storeError;
 
-        if (adminsError) throw adminsError;
-
-        const { error: storeError } = await withTimeout(
-          async () => await supabase.from('stores').delete().eq('id', id),
-          20000
-        );
-
-        if (storeError) throw storeError;
-
-        await reloadStoreData();
-      } catch (error) {
-        setStores(previousStores);
-        setProducts(previousProducts);
-        setCategories(previousCategories);
-        setCoupons(previousCoupons);
-        console.error('Erro ao deletar loja:', error);
-        throw error;
-      }
+      await reloadStoreData();
     },
-    [categories, coupons, products, reloadStoreData, stores]
+    [reloadStoreData]
   );
 
   const updatePlan = useCallback(
     async (planId: 'iniciante' | 'pro' | 'premium', data: Partial<Plan>) => {
-      const existingPlan = plans.find(
-        (plan) => String(plan.id).toLowerCase() === String(planId).toLowerCase()
-      );
+      const payload: any = {};
 
-      const defaultPlan = DEFAULT_PLANS.find((plan) => plan.id === planId);
+      if (data.name !== undefined) payload.name = data.name;
+      if (data.price !== undefined) payload.price = Number(data.price || 0);
+      if (data.features !== undefined) payload.features = data.features;
+      if (data.maxProducts !== undefined) payload.max_products = Number(data.maxProducts);
+      if (data.maxOrders !== undefined) payload.max_orders = Number(data.maxOrders);
 
-      const payload = normalizeDbPayload({
-        name: data.name ?? existingPlan?.name ?? defaultPlan?.name ?? planId,
-        price: data.price ?? existingPlan?.price ?? defaultPlan?.price ?? 0,
-        features: data.features ?? existingPlan?.features ?? defaultPlan?.features ?? [],
-        maxProducts:
-          data.maxProducts ?? existingPlan?.maxProducts ?? defaultPlan?.maxProducts ?? 0,
-        maxOrders: data.maxOrders ?? existingPlan?.maxOrders ?? defaultPlan?.maxOrders ?? 0,
-      } as any);
+      const { error } = await supabase.from('plans').update(payload).eq('code', planId);
+      if (error) throw error;
 
-      try {
-        await safeUpdate('plans', 'code', planId, payload);
-        await reloadStoreData();
-      } catch (error) {
-        console.error('Erro ao atualizar plano:', error);
-        throw error;
-      }
+      await reloadStoreData();
     },
-    [plans, reloadStoreData]
+    [reloadStoreData]
   );
 
   const value = useMemo(
