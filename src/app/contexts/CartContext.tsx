@@ -1,13 +1,24 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { CartItem, Product } from '../types';
 
+type ProductExtra = {
+  name: string;
+  price: number;
+};
+
+type CartItemWithExtras = CartItem & {
+  lineId?: string;
+  selectedExtras?: ProductExtra[];
+  unitPrice?: number;
+};
+
 interface CartContextType {
-  items: CartItem[];
-  addToCart: (product: Product) => void;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  items: CartItemWithExtras[];
+  addToCart: (product: Product, selectedExtras?: ProductExtra[]) => void;
+  removeFromCart: (productId: string, lineId?: string) => void;
+  updateQuantity: (productId: string, quantity: number, lineId?: string) => void;
   clearCart: () => void;
-  setCartItems: (items: CartItem[]) => void;
+  setCartItems: (items: CartItemWithExtras[]) => void;
   replaceCartFromOrder: (items: any[]) => void;
   total: number;
 }
@@ -29,55 +40,97 @@ function isValidProduct(product: any): product is Product {
   );
 }
 
+function normalizeExtra(extra: any): ProductExtra | null {
+  if (!extra || typeof extra !== 'object') return null;
+
+  const name = String(extra.name || '').trim();
+  const price = Number(extra.price) || 0;
+
+  if (!name) return null;
+
+  return { name, price };
+}
+
+function sanitizeExtras(extras: any): ProductExtra[] {
+  if (!Array.isArray(extras)) return [];
+  return extras.map(normalizeExtra).filter((item): item is ProductExtra => item !== null);
+}
+
+function buildLineId(productId: string, extras: ProductExtra[] = []) {
+  const extrasKey = extras
+    .map((extra) => `${extra.name}:${Number(extra.price) || 0}`)
+    .sort()
+    .join('|');
+
+  return `${productId}__${extrasKey}`;
+}
+
 /**
  * Aceita tanto:
  * - { product: {...}, quantity: 2 }
- * quanto:
+ * - { product: {...}, quantity: 2, selectedExtras: [...] }
  * - { id, name, price, image, quantity }
- * vindo de pedido antigo/repetição de pedido
+ * - itens vindos de pedido antigo/repetição de pedido
  */
-function normalizeCartItem(item: any): CartItem | null {
+function normalizeCartItem(item: any): CartItemWithExtras | null {
   if (!item || typeof item !== 'object') return null;
 
   if (item.product && isValidProduct(item.product)) {
+    const selectedExtras = sanitizeExtras(item.selectedExtras ?? item.extras);
+    const basePrice = Number(item.product.price) || 0;
+    const extrasTotal = selectedExtras.reduce((sum, extra) => sum + (Number(extra.price) || 0), 0);
+    const unitPrice = basePrice + extrasTotal;
+
     return {
       product: {
         ...item.product,
-        price: Number(item.product.price) || 0,
-      },
+        price: basePrice,
+      } as Product,
       quantity: Math.max(1, Number(item.quantity) || 1),
+      selectedExtras,
+      unitPrice,
+      lineId: String(item.lineId || buildLineId(String(item.product.id), selectedExtras)),
     };
   }
 
   if (typeof item.id === 'string' && item.id.trim() !== '') {
+    const selectedExtras = sanitizeExtras(item.selectedExtras ?? item.extras);
+    const basePrice = Number(item.price) || 0;
+    const extrasTotal = selectedExtras.reduce((sum, extra) => sum + (Number(extra.price) || 0), 0);
+    const unitPrice = basePrice + extrasTotal;
+
     return {
       product: {
         id: item.id,
         name: String(item.name || 'Produto'),
         description: String(item.description || ''),
-        price: Number(item.price) || 0,
+        price: basePrice,
         image: item.image || '',
         categoryId: String(item.categoryId || ''),
         storeId: String(item.storeId || ''),
-        active: item.active ?? true,
+        available: item.available ?? item.active ?? true,
+        extras: Array.isArray(item.extrasCatalog ?? item.productExtras) ? item.extrasCatalog ?? item.productExtras : [],
       } as Product,
       quantity: Math.max(1, Number(item.quantity) || 1),
+      selectedExtras,
+      unitPrice,
+      lineId: String(item.lineId || buildLineId(String(item.id), selectedExtras)),
     };
   }
 
   return null;
 }
 
-function sanitizeCartItems(items: any): CartItem[] {
+function sanitizeCartItems(items: any): CartItemWithExtras[] {
   if (!Array.isArray(items)) return [];
 
   return items
     .map(normalizeCartItem)
-    .filter((item): item is CartItem => item !== null);
+    .filter((item): item is CartItemWithExtras => item !== null);
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItemWithExtras[]>([]);
 
   useEffect(() => {
     if (!isBrowser()) return;
@@ -105,52 +158,68 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items]);
 
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, selectedExtras: ProductExtra[] = []) => {
     if (!isValidProduct(product)) return;
 
+    const safeExtras = sanitizeExtras(selectedExtras);
+    const lineId = buildLineId(product.id, safeExtras);
+
     setItems((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
+      const existing = prev.find((item) => item.lineId === lineId);
 
       if (existing) {
         return prev.map((item) =>
-          item.product.id === product.id
+          item.lineId === lineId
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
+
+      const basePrice = Number(product.price) || 0;
+      const extrasTotal = safeExtras.reduce((sum, extra) => sum + (Number(extra.price) || 0), 0);
 
       return [
         ...prev,
         {
           product: {
             ...product,
-            price: Number(product.price) || 0,
-          },
+            price: basePrice,
+          } as Product,
           quantity: 1,
+          selectedExtras: safeExtras,
+          unitPrice: basePrice + extrasTotal,
+          lineId,
         },
       ];
     });
   };
 
-  const removeFromCart = (productId: string) => {
-    if (!productId) return;
-    setItems((prev) => prev.filter((item) => item.product.id !== productId));
+  const removeFromCart = (productId: string, lineId?: string) => {
+    if (!productId && !lineId) return;
+
+    setItems((prev) =>
+      prev.filter((item) =>
+        lineId ? item.lineId !== lineId : item.product.id !== productId
+      )
+    );
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
-    if (!productId) return;
+  const updateQuantity = (productId: string, quantity: number, lineId?: string) => {
+    if (!productId && !lineId) return;
 
     if (quantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(productId, lineId);
       return;
     }
 
     setItems((prev) =>
-      prev.map((item) =>
-        item.product.id === productId
+      prev.map((item) => {
+        const isTarget = lineId ? item.lineId === lineId : item.product.id === productId;
+
+        return isTarget
           ? { ...item, quantity: Math.max(1, Number(quantity) || 1) }
-          : item
-      )
+          : item;
+      })
     );
   };
 
@@ -166,7 +235,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const setCartItems = (newItems: CartItem[]) => {
+  const setCartItems = (newItems: CartItemWithExtras[]) => {
     const sanitized = sanitizeCartItems(newItems);
     setItems(sanitized);
   };
@@ -178,9 +247,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const total = useMemo(() => {
     return items.reduce((sum, item) => {
-      const price = Number(item.product?.price) || 0;
+      const basePrice = Number(item.product?.price) || 0;
+      const extrasTotal = Array.isArray(item.selectedExtras)
+        ? item.selectedExtras.reduce((acc, extra) => acc + (Number(extra.price) || 0), 0)
+        : 0;
+      const unitPrice = Number(item.unitPrice) || basePrice + extrasTotal;
       const quantity = Number(item.quantity) || 0;
-      return sum + price * quantity;
+
+      return sum + unitPrice * quantity;
     }, 0);
   }, [items]);
 

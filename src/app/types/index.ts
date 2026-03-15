@@ -1,3 +1,8 @@
+export type ProductExtra = {
+  name: string;
+  price: number;
+};
+
 export interface Product {
   id: string;
   name: string;
@@ -6,9 +11,8 @@ export interface Product {
   storeId: string;
   categoryId?: string;
   available?: boolean;
-
   description?: string;
-  extras?: string[];
+  extras?: ProductExtra[];
 }
 
 export interface Category {
@@ -29,6 +33,9 @@ export interface Coupon {
 export interface CartItem {
   product: Product;
   quantity: number;
+  lineId?: string;
+  selectedExtras?: ProductExtra[];
+  unitPrice?: number;
 }
 
 export interface OrderItem {
@@ -41,6 +48,8 @@ export interface OrderItem {
   product?: Product;
   storeId?: string;
   categoryId?: string;
+  selectedExtras?: ProductExtra[];
+  unitPrice?: number;
 }
 
 export type OrderStatus =
