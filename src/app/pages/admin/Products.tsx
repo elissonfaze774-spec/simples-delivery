@@ -94,7 +94,6 @@ function openUpgradeWhatsApp(params: {
 export function AdminProducts() {
 
   const navigate = useNavigate()
-
   const { user, authLoading } = useAuth()
 
   const {
@@ -183,7 +182,6 @@ export function AdminProducts() {
   const openUpgradeModalFromError = (message:string)=>{
 
     const planName = getHumanPlanName((resolvedStore as any)?.plan)
-
     const suggestedPlans = getSuggestedPlans((resolvedStore as any)?.plan)
 
     setUpgradeModal({
@@ -252,7 +250,6 @@ export function AdminProducts() {
       if(editingProduct){
 
         await updateProduct(editingProduct.id,productData)
-
         toast.success('Produto atualizado com sucesso!')
 
       }else{
@@ -354,35 +351,52 @@ export function AdminProducts() {
             <form onSubmit={handleSubmitProduct} className="space-y-4">
 
               <div>
-                <Label>Nome</Label>
-                <Input name="name" defaultValue={editingProduct?.name || ''}/>
+                <Label className="text-white">Nome</Label>
+                <Input
+                  name="name"
+                  defaultValue={editingProduct?.name || ''}
+                  className="bg-white text-black border border-zinc-300"
+                />
               </div>
 
               <div>
-                <Label>Descrição</Label>
-                <Input name="description" placeholder="Descreva o produto"/>
+                <Label className="text-white">Descrição</Label>
+                <Input
+                  name="description"
+                  placeholder="Descreva o produto"
+                  className="bg-white text-black border border-zinc-300"
+                />
               </div>
 
               <div>
-                <Label>Preço</Label>
-                <Input name="price" type="number" step="0.01"/>
+                <Label className="text-white">Preço</Label>
+                <Input
+                  name="price"
+                  type="number"
+                  step="0.01"
+                  className="bg-white text-black border border-zinc-300"
+                />
               </div>
 
               <div>
-                <Label>Imagem (URL)</Label>
-                <Input name="image"/>
+                <Label className="text-white">Imagem (URL)</Label>
+                <Input
+                  name="image"
+                  className="bg-white text-black border border-zinc-300"
+                />
               </div>
 
               <div>
-                <Label>Categoria</Label>
+                <Label className="text-white">Categoria</Label>
 
                 <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
 
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white text-black border border-zinc-300">
                     <SelectValue placeholder="Categoria"/>
                   </SelectTrigger>
 
-                  <SelectContent>
+                  <SelectContent className="bg-white text-black">
+
                     <SelectItem value="none">Sem categoria</SelectItem>
 
                     {categories.map(category=>(
@@ -397,13 +411,17 @@ export function AdminProducts() {
               </div>
 
               <div>
-                <Label>Adicionais</Label>
-                <Input name="extras" placeholder="+ frango + bacon + queijo"/>
+                <Label className="text-white">Adicionais</Label>
+                <Input
+                  name="extras"
+                  placeholder="+ frango + bacon + queijo"
+                  className="bg-white text-black border border-zinc-300"
+                />
               </div>
 
               <Button
                 type="submit"
-                className="w-full bg-red-600 hover:bg-red-700"
+                className="w-full bg-red-600 hover:bg-red-700 text-white"
               >
                 Criar produto
               </Button>
