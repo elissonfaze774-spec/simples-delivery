@@ -6,6 +6,9 @@ export interface Product {
   storeId: string;
   categoryId?: string;
   available?: boolean;
+
+  description?: string;
+  extras?: string[];
 }
 
 export interface Category {

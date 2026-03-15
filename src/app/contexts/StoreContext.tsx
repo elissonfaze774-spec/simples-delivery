@@ -185,6 +185,8 @@ function normalizeProduct(product: any): Product {
     name: String(product?.name ?? ''),
     price: Number(product?.price ?? 0),
     image: String(product?.image ?? ''),
+    description: String(product?.description ?? ''),
+    extras: Array.isArray(product?.extras) ? product.extras : [],
     storeId: String(product?.storeId ?? product?.store_id ?? ''),
     categoryId:
       product?.categoryId ?? product?.category_id
@@ -405,42 +407,46 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const addProduct = useCallback(
-    async (product: Product) => {
-      const payload = {
-        name: product.name,
-        price: Number(product.price || 0),
-        image: product.image || '',
-        store_id: product.storeId,
-        category_id: product.categoryId || null,
-        is_available: product.available ?? true,
-      };
+  async (product: Product) => {
+    const payload = {
+      name: product.name,
+      price: Number(product.price || 0),
+      image: product.image || '',
+      description: product.description || '',
+      extras: product.extras || [],
+      store_id: product.storeId,
+      category_id: product.categoryId || null,
+      is_available: product.available ?? true,
+    };
 
-      const { error } = await supabase.from('products').insert(payload);
-      if (error) throw error;
+    const { error } = await supabase.from('products').insert(payload);
+    if (error) throw error;
 
-      await reloadStoreData();
-    },
-    [reloadStoreData]
-  );
+    await reloadStoreData();
+  },
+  [reloadStoreData]
+);
 
   const updateProduct = useCallback(
-    async (id: string, data: Partial<Product>) => {
-      const payload: any = {};
+  async (id: string, data: Partial<Product>) => {
+    const payload: any = {};
 
-      if (data.name !== undefined) payload.name = data.name;
-      if (data.price !== undefined) payload.price = Number(data.price || 0);
-      if (data.image !== undefined) payload.image = data.image;
-      if (data.storeId !== undefined) payload.store_id = data.storeId;
-      if (data.categoryId !== undefined) payload.category_id = data.categoryId || null;
-      if (data.available !== undefined) payload.is_available = data.available;
+    if (data.name !== undefined) payload.name = data.name;
+    if (data.price !== undefined) payload.price = Number(data.price || 0);
+    if (data.image !== undefined) payload.image = data.image;
+    if (data.description !== undefined) payload.description = data.description;
+    if (data.extras !== undefined) payload.extras = data.extras;
+    if (data.storeId !== undefined) payload.store_id = data.storeId;
+    if (data.categoryId !== undefined) payload.category_id = data.categoryId || null;
+    if (data.available !== undefined) payload.is_available = data.available;
 
-      const { error } = await supabase.from('products').update(payload).eq('id', id);
-      if (error) throw error;
+    const { error } = await supabase.from('products').update(payload).eq('id', id);
+    if (error) throw error;
 
-      await reloadStoreData();
-    },
-    [reloadStoreData]
-  );
+    await reloadStoreData();
+  },
+  [reloadStoreData]
+);
 
   const deleteProduct = useCallback(
     async (id: string) => {
