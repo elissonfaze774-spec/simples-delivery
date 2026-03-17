@@ -65,27 +65,37 @@ serve(async (req) => {
       );
     }
 
+    const normalizedName = String(name).trim();
     const normalizedEmail = String(email).trim().toLowerCase();
+    const normalizedPassword = String(password);
+    const normalizedStoreName = String(store_name).trim();
+    const normalizedWhatsapp = String(whatsapp ?? "").trim();
+    const normalizedPlan = String(plan ?? "iniciante").trim().toLowerCase();
+
+    const normalizedRole =
+      String(role ?? "admin").trim().toLowerCase() === "super_admin"
+        ? "super_admin"
+        : "admin";
 
     const { data: createdUser, error: createUserError } =
       await supabase.auth.admin.createUser({
         email: normalizedEmail,
-        password: String(password),
+        password: normalizedPassword,
         email_confirm: true,
         user_metadata: {
-          name: String(name),
-          role: String(role),
-          store_name: String(store_name),
-          plan: String(plan),
+          name: normalizedName,
+          role: normalizedRole,
+          store_name: normalizedStoreName,
+          plan: normalizedPlan,
         },
       });
 
-    if (createUserError) {
+    if (createUserError || !createdUser?.user?.id) {
       console.error("createUserError", createUserError);
 
       return new Response(
         JSON.stringify({
-          error: createUserError.message,
+          error: createUserError?.message ?? "Erro ao criar usuário no Auth.",
           step: "auth.admin.createUser",
         }),
         { status: 400, headers: corsHeaders }
@@ -98,12 +108,12 @@ serve(async (req) => {
       "setup_new_admin_account",
       {
         p_user_id: userId,
-        p_name: String(name),
+        p_name: normalizedName,
         p_email: normalizedEmail,
-        p_store_name: String(store_name),
-        p_whatsapp: String(whatsapp),
-        p_plan: String(plan),
-        p_role: String(role),
+        p_store_name: normalizedStoreName,
+        p_whatsapp: normalizedWhatsapp,
+        p_plan: normalizedPlan,
+        p_role: normalizedRole,
       }
     );
 
@@ -131,7 +141,7 @@ serve(async (req) => {
         setup: setupData,
         login: {
           email: normalizedEmail,
-          password: String(password),
+          password: normalizedPassword,
         },
       }),
       { status: 200, headers: corsHeaders }
