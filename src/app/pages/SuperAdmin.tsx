@@ -16,6 +16,13 @@ import {
   Trophy,
   Package,
   LogOut,
+  Search,
+  Filter,
+  AlertTriangle,
+  BarChart3,
+  Wallet,
+  Activity,
+  ArrowUpDown,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -38,12 +45,42 @@ import { toast } from 'sonner';
 import type { Store as StoreType, OrderItem } from '../types';
 
 type EditablePlanId = 'iniciante' | 'pro' | 'premium';
+type StoreStatusFilter = 'all' | 'active' | 'suspended' | 'inactive';
+type PlanFilter = 'all' | 'iniciante' | 'pro' | 'premium';
+type SortOption = 'name' | 'orders_desc' | 'revenue_desc' | 'plan' | 'status';
 
 function formatMoney(value: number) {
   return Number(value || 0).toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',
   });
+}
+
+function formatPercent(value: number) {
+  return `${Math.round(value)}%`;
+}
+
+function getStatusLabel(store: StoreType) {
+  if (store.suspended) return 'Suspensa';
+  if (store.active) return 'Ativa';
+  return 'Inativa';
+}
+
+function getStatusKey(store: StoreType): 'active' | 'suspended' | 'inactive' {
+  if (store.suspended) return 'suspended';
+  if (store.active) return 'active';
+  return 'inactive';
+}
+
+function getPlanLabel(planId?: string) {
+  switch (planId) {
+    case 'pro':
+      return 'Pro';
+    case 'premium':
+      return 'Premium';
+    default:
+      return 'Simples';
+  }
 }
 
 export function SuperAdmin() {
@@ -59,6 +96,11 @@ export function SuperAdmin() {
   const [editingPlan, setEditingPlan] = useState<EditablePlanId | null>(null);
   const [isSavingStore, setIsSavingStore] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StoreStatusFilter>('all');
+  const [planFilter, setPlanFilter] = useState<PlanFilter>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('orders_desc');
 
   useEffect(() => {
     if (authLoading) return;
@@ -89,39 +131,162 @@ export function SuperAdmin() {
   const saasStats = useMemo(() => {
     const totalStores = stores.length;
     const activeStores = stores.filter((store) => store.active && !store.suspended).length;
+    const suspendedStores = stores.filter((store) => store.suspended).length;
+    const inactiveStores = stores.filter((store) => !store.active && !store.suspended).length;
+
     const totalOrders = orders.length;
     const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+    const averageTicket = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     const saasRevenue = stores.reduce((sum, store) => {
       const plan = uniquePlans.find((p) => p.id === (store.plan || 'iniciante'));
       return sum + Number(plan?.price || 0);
     }, 0);
 
+    const storesNearLimit = stores.filter((store) => {
+      const plan = uniquePlans.find((p) => p.id === (store.plan || 'iniciante'));
+      const maxOrders = Number(plan?.maxOrders ?? -1);
+      if (maxOrders <= 0) return false;
+      if (maxOrders === -1) return false;
+
+      const storeOrdersCount = orders.filter(
+        (order) => String(order.storeId) === String(store.id)
+      ).length;
+      const usage = (storeOrdersCount / maxOrders) * 100;
+
+      return usage >= 80;
+    }).length;
+
     return {
       totalStores,
       activeStores,
+      suspendedStores,
+      inactiveStores,
       totalOrders,
       totalRevenue,
+      averageTicket,
       saasRevenue,
+      storesNearLimit,
     };
   }, [stores, orders, uniquePlans]);
 
-  const topStores = useMemo(() => {
-    const storeOrderCounts = stores.map((store) => {
+  const storeSummaries = useMemo(() => {
+    return stores.map((store) => {
+      const plan = uniquePlans.find((p) => p.id === (store.plan || 'iniciante'));
       const storeOrders = orders.filter((order) => String(order.storeId) === String(store.id));
       const orderCount = storeOrders.length;
       const revenue = storeOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+      const averageTicket = orderCount > 0 ? revenue / orderCount : 0;
+      const maxOrders = Number(plan?.maxOrders ?? -1);
 
-      return { store, orderCount, revenue };
+      const orderUsagePercent =
+        maxOrders > 0 ? Math.min((orderCount / maxOrders) * 100, 100) : 0;
+
+      const isNearLimit = maxOrders > 0 && orderUsagePercent >= 80;
+      const isLimitReached = maxOrders > 0 && orderCount >= maxOrders;
+
+      const storePublicUrl =
+        store.storeUrl && store.storeUrl.trim()
+          ? store.storeUrl
+          : `${window.location.origin}/loja/${encodeURIComponent(store.slug || store.id)}`;
+
+      const admin = users.find(
+        (currentUser) =>
+          String(currentUser.storeId) === String(store.id) && currentUser.role === 'admin'
+      );
+
+      return {
+        store,
+        plan,
+        admin,
+        orderCount,
+        revenue,
+        averageTicket,
+        maxOrders,
+        orderUsagePercent,
+        isNearLimit,
+        isLimitReached,
+        statusKey: getStatusKey(store),
+        statusLabel: getStatusLabel(store),
+        storePublicUrl,
+      };
+    });
+  }, [stores, uniquePlans, orders, users]);
+
+  const filteredStores = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    const filtered = storeSummaries.filter((item) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        String(item.store.name || '')
+          .toLowerCase()
+          .includes(normalizedSearch) ||
+        String(item.store.adminEmail || '')
+          .toLowerCase()
+          .includes(normalizedSearch) ||
+        String(item.store.whatsapp || '')
+          .toLowerCase()
+          .includes(normalizedSearch);
+
+      const matchesStatus =
+        statusFilter === 'all' ? true : item.statusKey === statusFilter;
+
+      const matchesPlan =
+        planFilter === 'all'
+          ? true
+          : String(item.store.plan || 'iniciante') === planFilter;
+
+      return matchesSearch && matchesStatus && matchesPlan;
     });
 
-    return storeOrderCounts.sort((a, b) => b.orderCount - a.orderCount).slice(0, 5);
-  }, [stores, orders]);
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return String(a.store.name || '').localeCompare(String(b.store.name || ''), 'pt-BR');
+        case 'revenue_desc':
+          return b.revenue - a.revenue;
+        case 'plan':
+          return getPlanLabel(a.store.plan).localeCompare(getPlanLabel(b.store.plan), 'pt-BR');
+        case 'status':
+          return a.statusLabel.localeCompare(b.statusLabel, 'pt-BR');
+        case 'orders_desc':
+        default:
+          return b.orderCount - a.orderCount;
+      }
+    });
+
+    return filtered;
+  }, [storeSummaries, searchTerm, statusFilter, planFilter, sortBy]);
+
+  const topStores = useMemo(() => {
+    return [...storeSummaries].sort((a, b) => b.orderCount - a.orderCount).slice(0, 5);
+  }, [storeSummaries]);
 
   const storeOrders = useMemo(() => {
     if (!viewOrdersStore) return [];
     return orders.filter((order) => String(order.storeId) === String(viewOrdersStore));
   }, [orders, viewOrdersStore]);
+
+  const planSummaries = useMemo(() => {
+    return uniquePlans.map((plan) => {
+      const storesInPlan = stores.filter((store) => (store.plan || 'iniciante') === plan.id);
+
+      const planRevenue = storesInPlan.reduce((sum) => sum + Number(plan.price || 0), 0);
+
+      const planOrders = orders.filter((order) => {
+        const currentStore = stores.find((store) => String(store.id) === String(order.storeId));
+        return (currentStore?.plan || 'iniciante') === plan.id;
+      });
+
+      return {
+        ...plan,
+        storesCount: storesInPlan.length,
+        revenue: planRevenue,
+        ordersCount: planOrders.length,
+      };
+    });
+  }, [uniquePlans, stores, orders]);
 
   const handleEditStore = (store: StoreType) => {
     setEditingStore(store);
@@ -332,7 +497,7 @@ export function SuperAdmin() {
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
               <Card className="rounded-[24px] border border-red-950/60 bg-[#090909] p-5 shadow-none">
                 <div className="mb-2 flex items-center gap-2 text-zinc-400">
                   <Store className="h-4 w-4 text-[#EA1D2C]" />
@@ -343,7 +508,7 @@ export function SuperAdmin() {
 
               <Card className="rounded-[24px] border border-red-950/60 bg-[#090909] p-5 shadow-none">
                 <div className="mb-2 flex items-center gap-2 text-zinc-400">
-                  <Power className="h-4 w-4 text-emerald-400" />
+                  <Activity className="h-4 w-4 text-emerald-400" />
                   <p className="text-sm">Lojas Ativas</p>
                 </div>
                 <p className="text-3xl font-black text-emerald-400">{saasStats.activeStores}</p>
@@ -351,8 +516,16 @@ export function SuperAdmin() {
 
               <Card className="rounded-[24px] border border-red-950/60 bg-[#090909] p-5 shadow-none">
                 <div className="mb-2 flex items-center gap-2 text-zinc-400">
+                  <AlertTriangle className="h-4 w-4 text-orange-400" />
+                  <p className="text-sm">Suspensas</p>
+                </div>
+                <p className="text-3xl font-black text-orange-400">{saasStats.suspendedStores}</p>
+              </Card>
+
+              <Card className="rounded-[24px] border border-red-950/60 bg-[#090909] p-5 shadow-none">
+                <div className="mb-2 flex items-center gap-2 text-zinc-400">
                   <ShoppingBag className="h-4 w-4 text-white" />
-                  <p className="text-sm">Total de Pedidos</p>
+                  <p className="text-sm">Pedidos Totais</p>
                 </div>
                 <p className="text-3xl font-black text-white">{saasStats.totalOrders}</p>
               </Card>
@@ -369,34 +542,58 @@ export function SuperAdmin() {
 
               <Card className="rounded-[24px] border border-red-950/60 bg-[#090909] p-5 shadow-none">
                 <div className="mb-2 flex items-center gap-2 text-zinc-400">
-                  <DollarSign className="h-4 w-4 text-[#ffcc4d]" />
+                  <Wallet className="h-4 w-4 text-[#ffcc4d]" />
                   <p className="text-sm">Receita SaaS</p>
                 </div>
                 <p className="text-2xl font-black text-[#ffcc4d]">
                   {formatMoney(saasStats.saasRevenue)}
                 </p>
-                <p className="mt-1 text-xs text-zinc-500">Mensal</p>
               </Card>
             </div>
 
-            <div className="rounded-[28px] border border-red-950/60 bg-black/70 p-6">
-              <h2 className="mb-4 text-2xl font-black tracking-tight text-white">
-                Distribuição de Planos
-              </h2>
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+              <Card className="rounded-[24px] border border-red-950/60 bg-[#090909] p-6 shadow-none">
+                <div className="mb-3 flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-[#EA1D2C]" />
+                  <h3 className="text-lg font-black text-white">Visão Geral</h3>
+                </div>
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                {uniquePlans.map((plan) => {
-                  const storesInPlan = stores.filter(
-                    (store) => (store.plan || 'iniciante') === plan.id
-                  ).length;
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center justify-between rounded-xl border border-red-950/50 bg-black/50 px-4 py-3">
+                    <span className="text-zinc-400">Ticket médio geral</span>
+                    <span className="font-bold text-emerald-400">
+                      {formatMoney(saasStats.averageTicket)}
+                    </span>
+                  </div>
 
-                  return (
-                    <Card
+                  <div className="flex items-center justify-between rounded-xl border border-red-950/50 bg-black/50 px-4 py-3">
+                    <span className="text-zinc-400">Lojas inativas</span>
+                    <span className="font-bold text-zinc-200">{saasStats.inactiveStores}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-xl border border-red-950/50 bg-black/50 px-4 py-3">
+                    <span className="text-zinc-400">Perto do limite</span>
+                    <span className="font-bold text-orange-400">
+                      {saasStats.storesNearLimit}
+                    </span>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="rounded-[24px] border border-red-950/60 bg-[#090909] p-6 shadow-none xl:col-span-2">
+                <div className="mb-4 flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-[#ffcc4d]" />
+                  <h3 className="text-lg font-black text-white">Resumo por Plano</h3>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  {planSummaries.map((plan) => (
+                    <div
                       key={plan.id}
-                      className="rounded-[24px] border border-red-950/60 bg-[#090909] p-6 shadow-none"
+                      className="rounded-2xl border border-red-950/50 bg-black/50 p-4"
                     >
-                      <div className="mb-4 flex items-center justify-between gap-3">
-                        <h3 className="text-xl font-black text-white">{plan.name}</h3>
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <p className="text-lg font-black text-white">{plan.name}</p>
                         <Badge
                           className={`border-0 ${
                             plan.id === 'premium'
@@ -404,98 +601,252 @@ export function SuperAdmin() {
                               : 'bg-zinc-800 text-zinc-200'
                           }`}
                         >
-                          {storesInPlan} lojas
+                          {plan.storesCount} lojas
                         </Badge>
                       </div>
 
-                      <p className="mb-4 text-4xl font-black text-[#EA1D2C]">
-                        {formatMoney(plan.price)}
-                      </p>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-zinc-500">Preço</span>
+                          <span className="font-semibold text-zinc-200">
+                            {formatMoney(plan.price)}
+                          </span>
+                        </div>
 
-                      <ul className="space-y-2 text-sm text-zinc-400">
-                        {plan.features.map((feature, index) => (
-                          <li key={`${plan.id}-${index}`}>• {feature}</li>
-                        ))}
-                      </ul>
-                    </Card>
-                  );
-                })}
-              </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-zinc-500">Receita</span>
+                          <span className="font-semibold text-[#ffcc4d]">
+                            {formatMoney(plan.revenue)}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-zinc-500">Pedidos</span>
+                          <span className="font-semibold text-zinc-200">{plan.ordersCount}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
             </div>
           </TabsContent>
 
-          <TabsContent value="stores" className="space-y-4">
-            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-              <h2 className="text-2xl font-black tracking-tight text-white">Gerenciar Lojas</h2>
-              <p className="text-sm text-zinc-400">{stores.length} lojas cadastradas</p>
+          <TabsContent value="stores" className="space-y-5">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <h2 className="text-2xl font-black tracking-tight text-white">
+                  Gerenciar Lojas
+                </h2>
+                <p className="text-sm text-zinc-400">
+                  {filteredStores.length} loja(s) encontrada(s)
+                </p>
+              </div>
+
+              <Card className="rounded-[24px] border border-red-950/60 bg-[#090909] p-4 shadow-none">
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
+                  <div className="lg:col-span-1">
+                    <Label className="mb-2 block text-zinc-300">Buscar loja</Label>
+                    <div className="relative">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                      <Input
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Nome, email ou WhatsApp"
+                        className="border-red-950/60 bg-black pl-9 text-white placeholder:text-zinc-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="mb-2 block text-zinc-300">Status</Label>
+                    <div className="relative">
+                      <Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                      <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value as StoreStatusFilter)}
+                        className="h-10 w-full rounded-md border border-red-950/60 bg-black pl-9 pr-3 text-sm text-white outline-none"
+                      >
+                        <option value="all">Todos</option>
+                        <option value="active">Ativas</option>
+                        <option value="suspended">Suspensas</option>
+                        <option value="inactive">Inativas</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="mb-2 block text-zinc-300">Plano</Label>
+                    <select
+                      value={planFilter}
+                      onChange={(e) => setPlanFilter(e.target.value as PlanFilter)}
+                      className="h-10 w-full rounded-md border border-red-950/60 bg-black px-3 text-sm text-white outline-none"
+                    >
+                      <option value="all">Todos</option>
+                      <option value="iniciante">Simples</option>
+                      <option value="pro">Pro</option>
+                      <option value="premium">Premium</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <Label className="mb-2 block text-zinc-300">Ordenar por</Label>
+                    <div className="relative">
+                      <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as SortOption)}
+                        className="h-10 w-full rounded-md border border-red-950/60 bg-black pl-9 pr-3 text-sm text-white outline-none"
+                      >
+                        <option value="orders_desc">Mais pedidos</option>
+                        <option value="revenue_desc">Maior faturamento</option>
+                        <option value="name">Nome A-Z</option>
+                        <option value="plan">Plano</option>
+                        <option value="status">Status</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </Card>
             </div>
 
             <div className="space-y-4">
-              {stores.map((store) => {
-                const plan = uniquePlans.find((p) => p.id === (store.plan || 'iniciante'));
-                const storeOrders = orders.filter(
-                  (order) => String(order.storeId) === String(store.id)
-                );
-                const storeOrderCount = storeOrders.length;
-                const storeRevenue = storeOrders.reduce(
-                  (sum, order) => sum + Number(order.total || 0),
-                  0
-                );
-
-                const storePublicUrl =
-                  store.storeUrl && store.storeUrl.trim()
-                    ? store.storeUrl
-                    : `${window.location.origin}/loja/${encodeURIComponent(store.slug || store.id)}`;
+              {filteredStores.map((item) => {
+                const {
+                  store,
+                  plan,
+                  admin,
+                  orderCount,
+                  revenue,
+                  averageTicket,
+                  maxOrders,
+                  orderUsagePercent,
+                  isNearLimit,
+                  isLimitReached,
+                  statusLabel,
+                  storePublicUrl,
+                } = item;
 
                 return (
                   <Card
                     key={store.id}
-                    className="rounded-[24px] border border-red-950/60 bg-[#090909] p-5 shadow-none"
+                    className="rounded-[28px] border border-red-950/60 bg-[#090909] p-5 shadow-none"
                   >
-                    <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-center">
+                    <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                       <div className="flex-1">
-                        <div className="mb-4 flex flex-wrap items-center gap-3">
-                          <h3 className="text-xl font-black text-white">{store.name}</h3>
+                        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <h3 className="text-2xl font-black text-white">{store.name}</h3>
 
-                          <Badge
-                            className={`border-0 ${
-                              store.suspended
-                                ? 'bg-red-600 text-white'
-                                : store.active
-                                ? 'bg-emerald-600 text-white'
-                                : 'bg-zinc-700 text-white'
-                            }`}
-                          >
-                            {store.suspended ? 'Suspensa' : store.active ? 'Ativa' : 'Inativa'}
-                          </Badge>
+                            <Badge
+                              className={`border-0 ${
+                                store.suspended
+                                  ? 'bg-red-600 text-white'
+                                  : store.active
+                                  ? 'bg-emerald-600 text-white'
+                                  : 'bg-zinc-700 text-white'
+                              }`}
+                            >
+                              {statusLabel}
+                            </Badge>
 
-                          <Badge className="border border-red-900/60 bg-red-950/30 text-zinc-200">
-                            {plan?.name || 'Sem plano'}
-                          </Badge>
+                            <Badge className="border border-red-900/60 bg-red-950/30 text-zinc-200">
+                              {plan?.name || getPlanLabel(store.plan)}
+                            </Badge>
+
+                            {isLimitReached && (
+                              <Badge className="border-0 bg-red-600 text-white">
+                                Limite atingido
+                              </Badge>
+                            )}
+
+                            {!isLimitReached && isNearLimit && (
+                              <Badge className="border-0 bg-orange-500 text-black">
+                                Perto do limite
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="text-sm text-zinc-500">
+                            Admin: <span className="text-zinc-300">{admin?.email || store.adminEmail || '-'}</span>
+                          </div>
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
-                          <div className="rounded-2xl border border-red-950/50 bg-black/50 p-3">
-                            <p className="text-zinc-500">Email</p>
-                            <p className="mt-1 font-medium text-white">{store.adminEmail || '-'}</p>
-                          </div>
-
-                          <div className="rounded-2xl border border-red-950/50 bg-black/50 p-3">
-                            <p className="text-zinc-500">WhatsApp</p>
-                            <p className="mt-1 font-medium text-white">{store.whatsapp || '-'}</p>
-                          </div>
-
-                          <div className="rounded-2xl border border-red-950/50 bg-black/50 p-3">
-                            <p className="text-zinc-500">Pedidos</p>
-                            <p className="mt-1 font-medium text-white">{storeOrderCount}</p>
-                          </div>
-
-                          <div className="rounded-2xl border border-red-950/50 bg-black/50 p-3">
-                            <p className="text-zinc-500">Faturamento</p>
-                            <p className="mt-1 font-bold text-emerald-400">
-                              {formatMoney(storeRevenue)}
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-5">
+                          <div className="rounded-2xl border border-red-950/50 bg-black/50 p-4">
+                            <p className="text-sm text-zinc-500">Email</p>
+                            <p className="mt-1 font-medium text-white break-all">
+                              {store.adminEmail || '-'}
                             </p>
                           </div>
+
+                          <div className="rounded-2xl border border-red-950/50 bg-black/50 p-4">
+                            <p className="text-sm text-zinc-500">WhatsApp</p>
+                            <p className="mt-1 font-medium text-white">
+                              {store.whatsapp || '-'}
+                            </p>
+                          </div>
+
+                          <div className="rounded-2xl border border-red-950/50 bg-black/50 p-4">
+                            <p className="text-sm text-zinc-500">Pedidos</p>
+                            <p className="mt-1 text-xl font-black text-white">{orderCount}</p>
+                          </div>
+
+                          <div className="rounded-2xl border border-red-950/50 bg-black/50 p-4">
+                            <p className="text-sm text-zinc-500">Faturamento</p>
+                            <p className="mt-1 text-xl font-black text-emerald-400">
+                              {formatMoney(revenue)}
+                            </p>
+                          </div>
+
+                          <div className="rounded-2xl border border-red-950/50 bg-black/50 p-4">
+                            <p className="text-sm text-zinc-500">Ticket médio</p>
+                            <p className="mt-1 text-xl font-black text-zinc-100">
+                              {formatMoney(averageTicket)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 rounded-2xl border border-red-950/50 bg-black/50 p-4">
+                          <div className="mb-2 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <div>
+                              <p className="text-sm text-zinc-500">Uso do plano em pedidos</p>
+                              <p className="text-sm text-zinc-300">
+                                {maxOrders === -1
+                                  ? 'Pedidos ilimitados'
+                                  : `${orderCount} / ${maxOrders} pedidos usados`}
+                              </p>
+                            </div>
+
+                            <div
+                              className={`text-sm font-bold ${
+                                maxOrders === -1
+                                  ? 'text-emerald-400'
+                                  : isLimitReached
+                                  ? 'text-red-400'
+                                  : isNearLimit
+                                  ? 'text-orange-400'
+                                  : 'text-zinc-300'
+                              }`}
+                            >
+                              {maxOrders === -1 ? 'Sem limite' : formatPercent(orderUsagePercent)}
+                            </div>
+                          </div>
+
+                          {maxOrders !== -1 && (
+                            <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-900">
+                              <div
+                                className={`h-full rounded-full transition-all ${
+                                  isLimitReached
+                                    ? 'bg-red-500'
+                                    : isNearLimit
+                                    ? 'bg-orange-400'
+                                    : 'bg-[#EA1D2C]'
+                                }`}
+                                style={{ width: `${Math.min(orderUsagePercent, 100)}%` }}
+                              />
+                            </div>
+                          )}
                         </div>
 
                         <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -521,7 +872,7 @@ export function SuperAdmin() {
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-2 xl:w-[220px] xl:flex-col">
+                      <div className="flex flex-wrap gap-2 xl:w-[240px] xl:flex-col">
                         <Button
                           variant="outline"
                           size="sm"
@@ -537,12 +888,6 @@ export function SuperAdmin() {
                           size="sm"
                           className="border-red-900/60 bg-black text-white hover:bg-red-950/40 hover:text-white"
                           onClick={() => {
-                            const admin = users.find(
-                              (currentUser) =>
-                                String(currentUser.storeId) === String(store.id) &&
-                                currentUser.role === 'admin'
-                            );
-
                             if (admin?.email) {
                               void handleResetPassword(admin.email);
                             } else {
@@ -600,6 +945,16 @@ export function SuperAdmin() {
                   </Card>
                 );
               })}
+
+              {filteredStores.length === 0 && (
+                <Card className="rounded-[24px] border border-red-950/60 bg-[#090909] p-10 text-center shadow-none">
+                  <Package className="mx-auto mb-3 h-12 w-12 text-zinc-700" />
+                  <p className="font-semibold text-zinc-300">Nenhuma loja encontrada</p>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Tente ajustar a busca ou os filtros.
+                  </p>
+                </Card>
+              )}
             </div>
           </TabsContent>
 
@@ -607,25 +962,54 @@ export function SuperAdmin() {
             <h2 className="text-2xl font-black tracking-tight text-white">Gerenciar Planos</h2>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              {uniquePlans.map((plan) => (
+              {planSummaries.map((plan) => (
                 <Card
                   key={plan.id}
                   className="rounded-[24px] border border-red-950/60 bg-[#090909] p-6 shadow-none"
                 >
-                  <h3 className="mb-2 text-2xl font-black text-white">{plan.name}</h3>
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-2xl font-black text-white">{plan.name}</h3>
+                    <Badge
+                      className={`border-0 ${
+                        plan.id === 'premium'
+                          ? 'bg-[#EA1D2C] text-white'
+                          : 'bg-zinc-800 text-zinc-200'
+                      }`}
+                    >
+                      {plan.storesCount} lojas
+                    </Badge>
+                  </div>
+
                   <p className="mb-4 text-3xl font-black text-[#EA1D2C]">
                     {formatMoney(plan.price)}/mês
                   </p>
 
-                  <div className="mb-4 space-y-2">
-                    <p className="text-sm text-zinc-400">
-                      <strong className="text-white">Max Produtos:</strong>{' '}
-                      {plan.maxProducts === -1 ? 'Ilimitado' : plan.maxProducts}
-                    </p>
-                    <p className="text-sm text-zinc-400">
-                      <strong className="text-white">Max Pedidos:</strong>{' '}
-                      {plan.maxOrders === -1 ? 'Ilimitado' : plan.maxOrders}
-                    </p>
+                  <div className="mb-4 space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-500">Receita gerada</span>
+                      <span className="font-bold text-[#ffcc4d]">
+                        {formatMoney(plan.revenue)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-500">Max Produtos</span>
+                      <span className="font-semibold text-zinc-200">
+                        {plan.maxProducts === -1 ? 'Ilimitado' : plan.maxProducts}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-500">Max Pedidos</span>
+                      <span className="font-semibold text-zinc-200">
+                        {plan.maxOrders === -1 ? 'Ilimitado' : plan.maxOrders}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-500">Pedidos no plano</span>
+                      <span className="font-semibold text-zinc-200">{plan.ordersCount}</span>
+                    </div>
                   </div>
 
                   <ul className="mb-5 space-y-2 text-sm text-zinc-400">
@@ -680,7 +1064,9 @@ export function SuperAdmin() {
 
                     <div className="flex-1">
                       <h3 className="text-lg font-black text-white">{item.store.name}</h3>
-                      <p className="text-sm text-zinc-500">{item.store.adminEmail || '-'}</p>
+                      <p className="text-sm text-zinc-500">
+                        {item.store.adminEmail || item.admin?.email || '-'}
+                      </p>
                     </div>
 
                     <div className="text-left md:text-right">
@@ -693,6 +1079,13 @@ export function SuperAdmin() {
                         {formatMoney(item.revenue)}
                       </p>
                       <p className="text-sm text-zinc-500">faturamento</p>
+                    </div>
+
+                    <div className="text-left md:text-right">
+                      <p className="text-lg font-black text-zinc-100">
+                        {formatMoney(item.averageTicket)}
+                      </p>
+                      <p className="text-sm text-zinc-500">ticket médio</p>
                     </div>
                   </div>
                 </Card>
@@ -826,6 +1219,7 @@ export function SuperAdmin() {
                         {new Date(order.createdAt).toLocaleString('pt-BR')}
                       </p>
                     </div>
+
                     <Badge className="border border-red-900/60 bg-red-950/30 text-zinc-100">
                       {order.status}
                     </Badge>
@@ -853,7 +1247,8 @@ export function SuperAdmin() {
         <DialogContent className="border border-red-950/60 bg-[#090909] text-white">
           <DialogHeader>
             <DialogTitle className="text-white">
-              Editar Plano {editingPlan && uniquePlans.find((plan) => plan.id === editingPlan)?.name}
+              Editar Plano{' '}
+              {editingPlan && uniquePlans.find((plan) => plan.id === editingPlan)?.name}
             </DialogTitle>
           </DialogHeader>
 
@@ -921,7 +1316,10 @@ export function SuperAdmin() {
                       />
                     </div>
 
-                    <Button type="submit" className="w-full bg-[#EA1D2C] text-white hover:bg-[#c81824]">
+                    <Button
+                      type="submit"
+                      className="w-full bg-[#EA1D2C] text-white hover:bg-[#c81824]"
+                    >
                       Salvar Plano
                     </Button>
                   </>
