@@ -15,14 +15,23 @@ serve(async (req) => {
 
   try {
     if (req.method !== "POST") {
-      return new Response(JSON.stringify({ error: "Método não permitido" }), {
-        status: 405,
-        headers: corsHeaders,
-      });
+      return new Response(
+        JSON.stringify({ error: "Método não permitido" }),
+        { status: 405, headers: corsHeaders }
+      );
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      return new Response(
+        JSON.stringify({
+          error: "SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados",
+        }),
+        { status: 500, headers: corsHeaders }
+      );
+    }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
@@ -43,10 +52,16 @@ serve(async (req) => {
         JSON.stringify({
           error: "name, email, password e store_name são obrigatórios",
         }),
-        {
-          status: 400,
-          headers: corsHeaders,
-        }
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    if (String(password).length < 6) {
+      return new Response(
+        JSON.stringify({
+          error: "A senha precisa ter pelo menos 6 caracteres.",
+        }),
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -66,15 +81,14 @@ serve(async (req) => {
       });
 
     if (createUserError) {
+      console.error("createUserError", createUserError);
+
       return new Response(
         JSON.stringify({
           error: createUserError.message,
           step: "auth.admin.createUser",
         }),
-        {
-          status: 400,
-          headers: corsHeaders,
-        }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -94,17 +108,19 @@ serve(async (req) => {
     );
 
     if (setupError) {
+      console.error("setupError", setupError);
+
       await supabase.auth.admin.deleteUser(userId);
 
       return new Response(
         JSON.stringify({
           error: setupError.message,
+          details: setupError.details ?? null,
+          hint: setupError.hint ?? null,
+          code: setupError.code ?? null,
           step: "setup_new_admin_account",
         }),
-        {
-          status: 400,
-          headers: corsHeaders,
-        }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -118,20 +134,16 @@ serve(async (req) => {
           password: String(password),
         },
       }),
-      {
-        status: 200,
-        headers: corsHeaders,
-      }
+      { status: 200, headers: corsHeaders }
     );
   } catch (error) {
+    console.error("edge-catch-error", error);
+
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : "Erro interno",
       }),
-      {
-        status: 500,
-        headers: corsHeaders,
-      }
+      { status: 500, headers: corsHeaders }
     );
   }
 });
