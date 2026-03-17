@@ -28,6 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useStore } from '../contexts/StoreContext';
 import { useOrders } from '../contexts/OrderContext';
+import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -96,11 +97,21 @@ export function SuperAdmin() {
   const [editingPlan, setEditingPlan] = useState<EditablePlanId | null>(null);
   const [isSavingStore, setIsSavingStore] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StoreStatusFilter>('all');
   const [planFilter, setPlanFilter] = useState<PlanFilter>('all');
   const [sortBy, setSortBy] = useState<SortOption>('orders_desc');
+
+  const [createAdminForm, setCreateAdminForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    storeName: '',
+    whatsapp: '',
+    plan: 'iniciante' as EditablePlanId,
+  });
 
   useEffect(() => {
     if (authLoading) return;
@@ -414,6 +425,59 @@ export function SuperAdmin() {
     }
   };
 
+  const handleCreateAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const payload = {
+      name: createAdminForm.name.trim(),
+      email: createAdminForm.email.trim().toLowerCase(),
+      password: createAdminForm.password,
+      store_name: createAdminForm.storeName.trim(),
+      whatsapp: createAdminForm.whatsapp.trim(),
+      plan: createAdminForm.plan,
+      role: 'admin',
+    };
+
+    if (!payload.name || !payload.email || !payload.password || !payload.store_name) {
+      toast.error('Preencha nome, email, senha e nome da loja.');
+      return;
+    }
+
+    setIsCreatingAdmin(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('create-admin-account', {
+        body: payload,
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Erro ao criar admin');
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.error || 'Não foi possível criar o admin');
+      }
+
+      toast.success('Admin e loja criados com sucesso!');
+
+      setCreateAdminForm({
+        name: '',
+        email: '',
+        password: '',
+        storeName: '',
+        whatsapp: '',
+        plan: 'iniciante',
+      });
+
+      console.log('Retorno da função create-admin-account:', data);
+    } catch (error) {
+      console.error('Erro ao criar admin:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao criar admin');
+    } finally {
+      setIsCreatingAdmin(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -633,6 +697,133 @@ export function SuperAdmin() {
           </TabsContent>
 
           <TabsContent value="stores" className="space-y-5">
+            <Card className="rounded-[28px] border border-red-950/60 bg-[#090909] p-5 shadow-none">
+              <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-2xl font-black tracking-tight text-white">
+                    Criar novo admin
+                  </h2>
+                  <p className="text-sm text-zinc-400">
+                    Cria login no Supabase, perfil, role e loja zerada.
+                  </p>
+                </div>
+
+                <Badge className="border border-red-900/60 bg-red-950/30 text-zinc-200">
+                  Edge Function
+                </Badge>
+              </div>
+
+              <form onSubmit={handleCreateAdmin} className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <div>
+                  <Label htmlFor="new-admin-name" className="mb-2 block text-zinc-300">
+                    Nome do admin
+                  </Label>
+                  <Input
+                    id="new-admin-name"
+                    value={createAdminForm.name}
+                    onChange={(e) =>
+                      setCreateAdminForm((prev) => ({ ...prev, name: e.target.value }))
+                    }
+                    placeholder="Ex: João Silva"
+                    className="border-red-950/60 bg-black text-white placeholder:text-zinc-500"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="new-admin-email" className="mb-2 block text-zinc-300">
+                    Email
+                  </Label>
+                  <Input
+                    id="new-admin-email"
+                    type="email"
+                    value={createAdminForm.email}
+                    onChange={(e) =>
+                      setCreateAdminForm((prev) => ({ ...prev, email: e.target.value }))
+                    }
+                    placeholder="admin@loja.com"
+                    className="border-red-950/60 bg-black text-white placeholder:text-zinc-500"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="new-admin-password" className="mb-2 block text-zinc-300">
+                    Senha
+                  </Label>
+                  <Input
+                    id="new-admin-password"
+                    type="text"
+                    value={createAdminForm.password}
+                    onChange={(e) =>
+                      setCreateAdminForm((prev) => ({ ...prev, password: e.target.value }))
+                    }
+                    placeholder="Digite a senha inicial"
+                    className="border-red-950/60 bg-black text-white placeholder:text-zinc-500"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="new-store-name" className="mb-2 block text-zinc-300">
+                    Nome da loja
+                  </Label>
+                  <Input
+                    id="new-store-name"
+                    value={createAdminForm.storeName}
+                    onChange={(e) =>
+                      setCreateAdminForm((prev) => ({ ...prev, storeName: e.target.value }))
+                    }
+                    placeholder="Ex: Delivery do Centro"
+                    className="border-red-950/60 bg-black text-white placeholder:text-zinc-500"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="new-admin-whatsapp" className="mb-2 block text-zinc-300">
+                    WhatsApp
+                  </Label>
+                  <Input
+                    id="new-admin-whatsapp"
+                    value={createAdminForm.whatsapp}
+                    onChange={(e) =>
+                      setCreateAdminForm((prev) => ({ ...prev, whatsapp: e.target.value }))
+                    }
+                    placeholder="82999999999"
+                    className="border-red-950/60 bg-black text-white placeholder:text-zinc-500"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="new-admin-plan" className="mb-2 block text-zinc-300">
+                    Plano inicial
+                  </Label>
+                  <select
+                    id="new-admin-plan"
+                    value={createAdminForm.plan}
+                    onChange={(e) =>
+                      setCreateAdminForm((prev) => ({
+                        ...prev,
+                        plan: e.target.value as EditablePlanId,
+                      }))
+                    }
+                    className="h-10 w-full rounded-md border border-red-950/60 bg-black px-3 text-sm text-white outline-none"
+                  >
+                    <option value="iniciante">Iniciante</option>
+                    <option value="pro">Pro</option>
+                    <option value="premium">Premium</option>
+                  </select>
+                </div>
+
+                <div className="lg:col-span-3">
+                  <Button
+                    type="submit"
+                    disabled={isCreatingAdmin}
+                    className="w-full bg-[#EA1D2C] text-white hover:bg-[#c81824]"
+                  >
+                    {isCreatingAdmin ? 'Criando admin e loja...' : 'Criar admin + loja'}
+                  </Button>
+                </div>
+              </form>
+            </Card>
+
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <h2 className="text-2xl font-black tracking-tight text-white">
@@ -768,23 +959,24 @@ export function SuperAdmin() {
                           </div>
 
                           <div className="text-sm text-zinc-500">
-                            Admin: <span className="text-zinc-300">{admin?.email || store.adminEmail || '-'}</span>
+                            Admin:{' '}
+                            <span className="text-zinc-300">
+                              {admin?.email || store.adminEmail || '-'}
+                            </span>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-5">
                           <div className="rounded-2xl border border-red-950/50 bg-black/50 p-4">
                             <p className="text-sm text-zinc-500">Email</p>
-                            <p className="mt-1 font-medium text-white break-all">
+                            <p className="mt-1 break-all font-medium text-white">
                               {store.adminEmail || '-'}
                             </p>
                           </div>
 
                           <div className="rounded-2xl border border-red-950/50 bg-black/50 p-4">
                             <p className="text-sm text-zinc-500">WhatsApp</p>
-                            <p className="mt-1 font-medium text-white">
-                              {store.whatsapp || '-'}
-                            </p>
+                            <p className="mt-1 font-medium text-white">{store.whatsapp || '-'}</p>
                           </div>
 
                           <div className="rounded-2xl border border-red-950/50 bg-black/50 p-4">
