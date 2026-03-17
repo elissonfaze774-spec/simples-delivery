@@ -492,7 +492,10 @@ export function AdminProducts() {
         <div className="flex flex-wrap gap-2">
           <Dialog open={openCategory} onOpenChange={handleOpenChangeCategory}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="rounded-full border-red-500 text-white hover:bg-red-950">
+              <Button
+                variant="outline"
+                className="rounded-full border-red-500 bg-white text-black hover:bg-zinc-100 hover:text-black"
+              >
                 <FolderPlus className="mr-2 h-4 w-4" />
                 Nova categoria
               </Button>
@@ -630,7 +633,7 @@ export function AdminProducts() {
                       type="button"
                       variant="outline"
                       onClick={addExtraField}
-                      className="border-red-900 text-white hover:bg-red-950"
+                      className="border-red-900 bg-white text-black hover:bg-zinc-100 hover:text-black"
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Adicionar adicional
@@ -671,7 +674,7 @@ export function AdminProducts() {
                             type="button"
                             variant="outline"
                             onClick={() => removeExtraField(extra.id)}
-                            className="w-full border-red-900 text-red-400 hover:bg-red-950"
+                            className="w-full border-red-900 bg-white text-red-500 hover:bg-zinc-100 hover:text-red-600"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Remover
@@ -742,16 +745,18 @@ export function AdminProducts() {
                           size="icon"
                           variant="outline"
                           onClick={() => handleEditCategory(category)}
+                          className="bg-white text-black hover:bg-zinc-100 hover:text-black"
                         >
-                          <Pencil className="text-white h-4 w-4" />
+                          <Pencil className="h-4 w-4" />
                         </Button>
 
                         <Button
                           size="icon"
                           variant="outline"
                           onClick={() => handleDeleteCategory(category.id)}
+                          className="bg-white text-red-500 hover:bg-zinc-100 hover:text-red-600"
                         >
-                          <Trash2 className="text-red-500" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
@@ -843,16 +848,18 @@ export function AdminProducts() {
                                 size="icon"
                                 variant="outline"
                                 onClick={() => handleEditProduct(product)}
+                                className="bg-white text-black hover:bg-zinc-100 hover:text-black"
                               >
-                                <Pencil className="text-white h-4 w-4" />
+                                <Pencil className="h-4 w-4" />
                               </Button>
 
                               <Button
                                 size="icon"
                                 variant="outline"
                                 onClick={() => handleDeleteProduct(product.id)}
+                                className="bg-white text-red-500 hover:bg-zinc-100 hover:text-red-600"
                               >
-                                <Trash2 className="text-red-500" />
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
                           </div>
@@ -929,16 +936,18 @@ export function AdminProducts() {
                               size="icon"
                               variant="outline"
                               onClick={() => handleEditProduct(product)}
+                              className="bg-white text-black hover:bg-zinc-100 hover:text-black"
                             >
-                              <Pencil className="text-white h-4 w-4" />
+                              <Pencil className="h-4 w-4" />
                             </Button>
 
                             <Button
                               size="icon"
                               variant="outline"
                               onClick={() => handleDeleteProduct(product.id)}
+                              className="bg-white text-red-500 hover:bg-zinc-100 hover:text-red-600"
                             >
-                              <Trash2 className="text-red-500" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
