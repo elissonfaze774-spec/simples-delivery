@@ -11,14 +11,24 @@ type Props = {
 
 export function AdminEmptyState({ icon: Icon, title, description, actionLabel, onAction }: Props) {
   return (
-    <div className="rounded-[28px] border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-card)]/70 px-6 py-12 text-center">
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[color:var(--color-primary)/10] text-[color:var(--color-primary)]">
-        <Icon className="h-8 w-8" />
+    <div className="rounded-[32px] border border-red-950/80 bg-gradient-to-br from-[#140404] via-black to-[#0a0a0a] px-6 py-12 text-center text-white shadow-[0_0_0_1px_rgba(127,29,29,0.18),0_20px_80px_rgba(0,0,0,0.45)]">
+      <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl border border-red-500/20 bg-red-500/10 text-red-500 shadow-[0_0_30px_rgba(239,68,68,0.12)]">
+        <Icon className="h-9 w-9" />
       </div>
-      <h3 className="mt-5 text-xl font-bold text-slate-900">{title}</h3>
-      <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">{description}</p>
+
+      <h3 className="mt-6 text-3xl font-black tracking-tight text-white">
+        {title}
+      </h3>
+
+      <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-zinc-400">
+        {description}
+      </p>
+
       {actionLabel && onAction ? (
-        <Button onClick={onAction} className="mt-6 rounded-full bg-[color:var(--color-primary)] px-6 hover:bg-[color:var(--destructive)]">
+        <Button
+          onClick={onAction}
+          className="mt-8 rounded-full bg-red-500 px-8 text-white hover:bg-red-600"
+        >
           {actionLabel}
         </Button>
       ) : null}
