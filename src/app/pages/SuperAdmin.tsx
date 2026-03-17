@@ -28,7 +28,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useStore } from '../contexts/StoreContext';
 import { useOrders } from '../contexts/OrderContext';
-import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -49,6 +48,20 @@ type EditablePlanId = 'iniciante' | 'pro' | 'premium';
 type StoreStatusFilter = 'all' | 'active' | 'suspended' | 'inactive';
 type PlanFilter = 'all' | 'iniciante' | 'pro' | 'premium';
 type SortOption = 'name' | 'orders_desc' | 'revenue_desc' | 'plan' | 'status';
+
+type CreateAdminResponse = {
+  success?: boolean;
+  error?: string;
+  message?: string;
+  details?: string | null;
+  hint?: string | null;
+  code?: string | null;
+  step?: string;
+  login?: {
+    email: string;
+    password: string;
+  };
+};
 
 function formatMoney(value: number) {
   return Number(value || 0).toLocaleString('pt-BR', {
@@ -82,6 +95,11 @@ function getPlanLabel(planId?: string) {
     default:
       return 'Simples';
   }
+}
+
+function safeDate(value: unknown) {
+  const date = new Date(String(value || ''));
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString('pt-BR');
 }
 
 export function SuperAdmin() {
@@ -157,8 +175,7 @@ export function SuperAdmin() {
     const storesNearLimit = stores.filter((store) => {
       const plan = uniquePlans.find((p) => p.id === (store.plan || 'iniciante'));
       const maxOrders = Number(plan?.maxOrders ?? -1);
-      if (maxOrders <= 0) return false;
-      if (maxOrders === -1) return false;
+      if (maxOrders <= 0 || maxOrders === -1) return false;
 
       const storeOrdersCount = orders.filter(
         (order) => String(order.storeId) === String(store.id)
@@ -197,8 +214,8 @@ export function SuperAdmin() {
       const isLimitReached = maxOrders > 0 && orderCount >= maxOrders;
 
       const storePublicUrl =
-        store.storeUrl && store.storeUrl.trim()
-          ? store.storeUrl
+        store.storeUrl && String(store.storeUrl).trim()
+          ? String(store.storeUrl)
           : `${window.location.origin}/loja/${encodeURIComponent(store.slug || store.id)}`;
 
       const admin = users.find(
@@ -240,13 +257,9 @@ export function SuperAdmin() {
           .toLowerCase()
           .includes(normalizedSearch);
 
-      const matchesStatus =
-        statusFilter === 'all' ? true : item.statusKey === statusFilter;
-
+      const matchesStatus = statusFilter === 'all' ? true : item.statusKey === statusFilter;
       const matchesPlan =
-        planFilter === 'all'
-          ? true
-          : String(item.store.plan || 'iniciante') === planFilter;
+        planFilter === 'all' ? true : String(item.store.plan || 'iniciante') === planFilter;
 
       return matchesSearch && matchesStatus && matchesPlan;
     });
@@ -428,34 +441,64 @@ export function SuperAdmin() {
   const handleCreateAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
     const payload = {
       name: createAdminForm.name.trim(),
       email: createAdminForm.email.trim().toLowerCase(),
-      password: createAdminForm.password,
+      password: createAdminForm.password.trim(),
       store_name: createAdminForm.storeName.trim(),
       whatsapp: createAdminForm.whatsapp.trim(),
       plan: createAdminForm.plan,
       role: 'admin',
     };
 
+    if (!supabaseUrl || !anonKey) {
+      toast.error('Variáveis VITE_SUPABASE_URL ou VITE_SUPABASE_ANON_KEY não encontradas.');
+      return;
+    }
+
     if (!payload.name || !payload.email || !payload.password || !payload.store_name) {
       toast.error('Preencha nome, email, senha e nome da loja.');
+      return;
+    }
+
+    if (payload.password.length < 6) {
+      toast.error('A senha precisa ter pelo menos 6 caracteres.');
       return;
     }
 
     setIsCreatingAdmin(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('create-admin-account', {
-        body: payload,
+      const response = await fetch(`${supabaseUrl}/functions/v1/create-admin-account`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+        },
+        body: JSON.stringify(payload),
       });
 
-      if (error) {
-        throw new Error(error.message || 'Erro ao criar admin');
+      const result = (await response.json().catch(() => null)) as CreateAdminResponse | null;
+
+      console.log('STATUS EDGE FUNCTION:', response.status);
+      console.log('BODY EDGE FUNCTION:', result);
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            result?.message ||
+            result?.details ||
+            result?.hint ||
+            `Erro ${response.status} ao criar admin`
+        );
       }
 
-      if (!data?.success) {
-        throw new Error(data?.error || 'Não foi possível criar o admin');
+      if (!result?.success) {
+        throw new Error(result?.error || 'Não foi possível criar o admin');
       }
 
       toast.success('Admin e loja criados com sucesso!');
@@ -469,9 +512,11 @@ export function SuperAdmin() {
         plan: 'iniciante',
       });
 
-      console.log('Retorno da função create-admin-account:', data);
+      setTimeout(() => {
+        window.location.reload();
+      }, 800);
     } catch (error) {
-      console.error('Erro ao criar admin:', error);
+      console.error('ERRO REAL AO CRIAR ADMIN:', error);
       toast.error(error instanceof Error ? error.message : 'Erro ao criar admin');
     } finally {
       setIsCreatingAdmin(false);
@@ -1205,7 +1250,7 @@ export function SuperAdmin() {
                   </div>
 
                   <ul className="mb-5 space-y-2 text-sm text-zinc-400">
-                    {plan.features.map((feature, index) => (
+                    {plan.features.map((feature: string, index: number) => (
                       <li key={`${plan.id}-feature-${index}`}>• {feature}</li>
                     ))}
                   </ul>
@@ -1407,9 +1452,7 @@ export function SuperAdmin() {
                   <div className="mb-2 flex items-start justify-between gap-3">
                     <div>
                       <p className="font-bold text-white">{order.code}</p>
-                      <p className="text-sm text-zinc-500">
-                        {new Date(order.createdAt).toLocaleString('pt-BR')}
-                      </p>
+                      <p className="text-sm text-zinc-500">{safeDate(order.createdAt)}</p>
                     </div>
 
                     <Badge className="border border-red-900/60 bg-red-950/30 text-zinc-100">
@@ -1502,7 +1545,7 @@ export function SuperAdmin() {
                       <Input
                         id="features"
                         name="features"
-                        defaultValue={plan.features.join(', ')}
+                        defaultValue={Array.isArray(plan.features) ? plan.features.join(', ') : ''}
                         required
                         className="border-red-950/60 bg-black text-white"
                       />
