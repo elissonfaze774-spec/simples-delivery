@@ -260,7 +260,11 @@ export function SuperAdmin() {
   };
 
   if (authLoading || !authChecked) {
-    return <div className="p-4">Carregando sessão...</div>;
+    return (
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,40,40,0.16),_transparent_35%),linear-gradient(180deg,#090909_0%,#050505_100%)] p-6 text-white">
+        Carregando sessão...
+      </div>
+    );
   }
 
   if (!user || user.role !== 'super-admin') {
@@ -268,23 +272,28 @@ export function SuperAdmin() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 shadow-lg">
-        <div className="mx-auto max-w-7xl px-4 py-4">
-          <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,40,40,0.16),_transparent_35%),linear-gradient(180deg,#090909_0%,#050505_100%)] text-white">
+      <div className="border-b border-red-950/50 bg-black/60 backdrop-blur-xl">
+        <div className="mx-auto max-w-7xl px-4 py-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-3">
-              <Crown className="h-8 w-8 text-yellow-300" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-red-900/60 bg-red-950/30">
+                <Crown className="h-7 w-7 text-[#ffcc4d]" />
+              </div>
+
               <div>
-                <h1 className="text-2xl font-bold text-white">Super Admin Dashboard</h1>
-                <p className="text-sm text-purple-100">Gerenciamento Completo do SaaS</p>
+                <h1 className="text-2xl font-black tracking-tight text-white md:text-3xl">
+                  Super Admin Dashboard
+                </h1>
+                <p className="text-sm text-zinc-400">Gerenciamento completo do SaaS</p>
               </div>
             </div>
 
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="text-white hover:bg-white/10"
+              className="border-red-900/60 bg-black text-white hover:bg-red-950/40 hover:text-white"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Sair
@@ -295,63 +304,86 @@ export function SuperAdmin() {
 
       <div className="mx-auto max-w-7xl px-4 py-6">
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="stores">Lojas</TabsTrigger>
-            <TabsTrigger value="plans">Planos</TabsTrigger>
-            <TabsTrigger value="ranking">Ranking</TabsTrigger>
+          <TabsList className="grid h-auto w-full grid-cols-2 rounded-[22px] border border-red-950/60 bg-[#101010] p-1 md:grid-cols-4">
+            <TabsTrigger
+              value="dashboard"
+              className="rounded-[18px] text-zinc-400 data-[state=active]:bg-[#EA1D2C] data-[state=active]:text-white data-[state=active]:shadow-none"
+            >
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger
+              value="stores"
+              className="rounded-[18px] text-zinc-400 data-[state=active]:bg-[#EA1D2C] data-[state=active]:text-white data-[state=active]:shadow-none"
+            >
+              Lojas
+            </TabsTrigger>
+            <TabsTrigger
+              value="plans"
+              className="rounded-[18px] text-zinc-400 data-[state=active]:bg-[#EA1D2C] data-[state=active]:text-white data-[state=active]:shadow-none"
+            >
+              Planos
+            </TabsTrigger>
+            <TabsTrigger
+              value="ranking"
+              className="rounded-[18px] text-zinc-400 data-[state=active]:bg-[#EA1D2C] data-[state=active]:text-white data-[state=active]:shadow-none"
+            >
+              Ranking
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
-              <Card className="border-l-4 border-l-purple-600 p-4">
-                <div className="mb-1 flex items-center gap-2 text-gray-500">
-                  <Store className="h-4 w-4" />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+              <Card className="rounded-[24px] border border-red-950/60 bg-[#090909] p-5 shadow-none">
+                <div className="mb-2 flex items-center gap-2 text-zinc-400">
+                  <Store className="h-4 w-4 text-[#EA1D2C]" />
                   <p className="text-sm">Total de Lojas</p>
                 </div>
-                <p className="text-3xl font-bold text-purple-600">{saasStats.totalStores}</p>
+                <p className="text-3xl font-black text-white">{saasStats.totalStores}</p>
               </Card>
 
-              <Card className="border-l-4 border-l-green-600 p-4">
-                <div className="mb-1 flex items-center gap-2 text-gray-500">
-                  <Power className="h-4 w-4" />
+              <Card className="rounded-[24px] border border-red-950/60 bg-[#090909] p-5 shadow-none">
+                <div className="mb-2 flex items-center gap-2 text-zinc-400">
+                  <Power className="h-4 w-4 text-emerald-400" />
                   <p className="text-sm">Lojas Ativas</p>
                 </div>
-                <p className="text-3xl font-bold text-green-600">{saasStats.activeStores}</p>
+                <p className="text-3xl font-black text-emerald-400">{saasStats.activeStores}</p>
               </Card>
 
-              <Card className="border-l-4 border-l-blue-600 p-4">
-                <div className="mb-1 flex items-center gap-2 text-gray-500">
-                  <ShoppingBag className="h-4 w-4" />
+              <Card className="rounded-[24px] border border-red-950/60 bg-[#090909] p-5 shadow-none">
+                <div className="mb-2 flex items-center gap-2 text-zinc-400">
+                  <ShoppingBag className="h-4 w-4 text-white" />
                   <p className="text-sm">Total de Pedidos</p>
                 </div>
-                <p className="text-3xl font-bold text-blue-600">{saasStats.totalOrders}</p>
+                <p className="text-3xl font-black text-white">{saasStats.totalOrders}</p>
               </Card>
 
-              <Card className="border-l-4 border-l-orange-600 p-4">
-                <div className="mb-1 flex items-center gap-2 text-gray-500">
-                  <TrendingUp className="h-4 w-4" />
+              <Card className="rounded-[24px] border border-red-950/60 bg-[#090909] p-5 shadow-none">
+                <div className="mb-2 flex items-center gap-2 text-zinc-400">
+                  <TrendingUp className="h-4 w-4 text-[#EA1D2C]" />
                   <p className="text-sm">Volume Total</p>
                 </div>
-                <p className="text-2xl font-bold text-orange-600">
+                <p className="text-2xl font-black text-[#EA1D2C]">
                   {formatMoney(saasStats.totalRevenue)}
                 </p>
               </Card>
 
-              <Card className="border-l-4 border-l-yellow-600 p-4">
-                <div className="mb-1 flex items-center gap-2 text-gray-500">
-                  <DollarSign className="h-4 w-4" />
+              <Card className="rounded-[24px] border border-red-950/60 bg-[#090909] p-5 shadow-none">
+                <div className="mb-2 flex items-center gap-2 text-zinc-400">
+                  <DollarSign className="h-4 w-4 text-[#ffcc4d]" />
                   <p className="text-sm">Receita SaaS</p>
                 </div>
-                <p className="text-2xl font-bold text-yellow-600">
+                <p className="text-2xl font-black text-[#ffcc4d]">
                   {formatMoney(saasStats.saasRevenue)}
                 </p>
-                <p className="mt-1 text-xs text-gray-500">Mensal</p>
+                <p className="mt-1 text-xs text-zinc-500">Mensal</p>
               </Card>
             </div>
 
-            <div>
-              <h2 className="mb-4 text-xl font-semibold">Distribuição de Planos</h2>
+            <div className="rounded-[28px] border border-red-950/60 bg-black/70 p-6">
+              <h2 className="mb-4 text-2xl font-black tracking-tight text-white">
+                Distribuição de Planos
+              </h2>
+
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 {uniquePlans.map((plan) => {
                   const storesInPlan = stores.filter(
@@ -359,19 +391,28 @@ export function SuperAdmin() {
                   ).length;
 
                   return (
-                    <Card key={plan.id} className="p-6 transition-shadow hover:shadow-lg">
-                      <div className="mb-3 flex items-center justify-between">
-                        <h3 className="text-lg font-semibold">{plan.name}</h3>
-                        <Badge variant={plan.id === 'premium' ? 'default' : 'secondary'}>
+                    <Card
+                      key={plan.id}
+                      className="rounded-[24px] border border-red-950/60 bg-[#090909] p-6 shadow-none"
+                    >
+                      <div className="mb-4 flex items-center justify-between gap-3">
+                        <h3 className="text-xl font-black text-white">{plan.name}</h3>
+                        <Badge
+                          className={`border-0 ${
+                            plan.id === 'premium'
+                              ? 'bg-[#EA1D2C] text-white'
+                              : 'bg-zinc-800 text-zinc-200'
+                          }`}
+                        >
                           {storesInPlan} lojas
                         </Badge>
                       </div>
 
-                      <p className="mb-3 text-3xl font-bold text-[#EA1D2C]">
+                      <p className="mb-4 text-4xl font-black text-[#EA1D2C]">
                         {formatMoney(plan.price)}
                       </p>
 
-                      <ul className="space-y-1 text-sm text-gray-600">
+                      <ul className="space-y-2 text-sm text-zinc-400">
                         {plan.features.map((feature, index) => (
                           <li key={`${plan.id}-${index}`}>• {feature}</li>
                         ))}
@@ -384,15 +425,17 @@ export function SuperAdmin() {
           </TabsContent>
 
           <TabsContent value="stores" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Gerenciar Lojas</h2>
-              <p className="text-sm text-gray-500">{stores.length} lojas cadastradas</p>
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <h2 className="text-2xl font-black tracking-tight text-white">Gerenciar Lojas</h2>
+              <p className="text-sm text-zinc-400">{stores.length} lojas cadastradas</p>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               {stores.map((store) => {
                 const plan = uniquePlans.find((p) => p.id === (store.plan || 'iniciante'));
-                const storeOrders = orders.filter((order) => String(order.storeId) === String(store.id));
+                const storeOrders = orders.filter(
+                  (order) => String(order.storeId) === String(store.id)
+                );
                 const storeOrderCount = storeOrders.length;
                 const storeRevenue = storeOrders.reduce(
                   (sum, order) => sum + Number(order.total || 0),
@@ -405,71 +448,86 @@ export function SuperAdmin() {
                     : `${window.location.origin}/loja/${encodeURIComponent(store.slug || store.id)}`;
 
                 return (
-                  <Card key={store.id} className="p-4 transition-shadow hover:shadow-md">
-                    <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+                  <Card
+                    key={store.id}
+                    className="rounded-[24px] border border-red-950/60 bg-[#090909] p-5 shadow-none"
+                  >
+                    <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-center">
                       <div className="flex-1">
-                        <div className="mb-2 flex items-center gap-3">
-                          <h3 className="text-lg font-semibold">{store.name}</h3>
+                        <div className="mb-4 flex flex-wrap items-center gap-3">
+                          <h3 className="text-xl font-black text-white">{store.name}</h3>
+
                           <Badge
-                            variant={
+                            className={`border-0 ${
                               store.suspended
-                                ? 'destructive'
+                                ? 'bg-red-600 text-white'
                                 : store.active
-                                ? 'default'
-                                : 'secondary'
-                            }
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-zinc-700 text-white'
+                            }`}
                           >
                             {store.suspended ? 'Suspensa' : store.active ? 'Ativa' : 'Inativa'}
                           </Badge>
-                          <Badge variant="outline">{plan?.name || 'Sem plano'}</Badge>
+
+                          <Badge className="border border-red-900/60 bg-red-950/30 text-zinc-200">
+                            {plan?.name || 'Sem plano'}
+                          </Badge>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
-                          <div>
-                            <p className="text-gray-500">Email</p>
-                            <p className="font-medium">{store.adminEmail || '-'}</p>
+                        <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
+                          <div className="rounded-2xl border border-red-950/50 bg-black/50 p-3">
+                            <p className="text-zinc-500">Email</p>
+                            <p className="mt-1 font-medium text-white">{store.adminEmail || '-'}</p>
                           </div>
-                          <div>
-                            <p className="text-gray-500">WhatsApp</p>
-                            <p className="font-medium">{store.whatsapp || '-'}</p>
+
+                          <div className="rounded-2xl border border-red-950/50 bg-black/50 p-3">
+                            <p className="text-zinc-500">WhatsApp</p>
+                            <p className="mt-1 font-medium text-white">{store.whatsapp || '-'}</p>
                           </div>
-                          <div>
-                            <p className="text-gray-500">Pedidos</p>
-                            <p className="font-medium">{storeOrderCount}</p>
+
+                          <div className="rounded-2xl border border-red-950/50 bg-black/50 p-3">
+                            <p className="text-zinc-500">Pedidos</p>
+                            <p className="mt-1 font-medium text-white">{storeOrderCount}</p>
                           </div>
-                          <div>
-                            <p className="text-gray-500">Faturamento</p>
-                            <p className="font-medium text-green-600">
+
+                          <div className="rounded-2xl border border-red-950/50 bg-black/50 p-3">
+                            <p className="text-zinc-500">Faturamento</p>
+                            <p className="mt-1 font-bold text-emerald-400">
                               {formatMoney(storeRevenue)}
                             </p>
                           </div>
                         </div>
 
-                        <div className="mt-3 flex items-center gap-2">
+                        <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleCopyLink(storePublicUrl, store.id)}
+                            className="border-red-900/60 bg-black text-white hover:bg-red-950/40 hover:text-white"
                           >
                             {copiedLink === store.id ? (
-                              <Check className="mr-1 h-4 w-4 text-green-600" />
+                              <Check className="mr-1 h-4 w-4 text-emerald-400" />
                             ) : (
                               <Copy className="mr-1 h-4 w-4" />
                             )}
                             {copiedLink === store.id ? 'Copiado!' : 'Copiar Link'}
                           </Button>
 
-                          <Badge
-                            variant="secondary"
-                            className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs"
-                          >
-                            {storePublicUrl}
-                          </Badge>
+                          <div className="max-w-full overflow-hidden rounded-xl border border-red-950/60 bg-black/50 px-3 py-2 text-xs text-zinc-400">
+                            <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
+                              {storePublicUrl}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-2 lg:flex-col">
-                        <Button variant="outline" size="sm" onClick={() => handleEditStore(store)}>
+                      <div className="flex flex-wrap gap-2 xl:w-[220px] xl:flex-col">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditStore(store)}
+                          className="border-red-900/60 bg-black text-white hover:bg-red-950/40 hover:text-white"
+                        >
                           <Edit className="mr-1 h-4 w-4" />
                           Editar
                         </Button>
@@ -477,6 +535,7 @@ export function SuperAdmin() {
                         <Button
                           variant="outline"
                           size="sm"
+                          className="border-red-900/60 bg-black text-white hover:bg-red-950/40 hover:text-white"
                           onClick={() => {
                             const admin = users.find(
                               (currentUser) =>
@@ -498,6 +557,7 @@ export function SuperAdmin() {
                         <Button
                           variant="outline"
                           size="sm"
+                          className="border-red-900/60 bg-black text-white hover:bg-red-950/40 hover:text-white"
                           onClick={() => setViewOrdersStore(store.id)}
                         >
                           <Receipt className="mr-1 h-4 w-4" />
@@ -508,7 +568,7 @@ export function SuperAdmin() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="border-green-600 text-green-600"
+                            className="border-emerald-700 bg-black text-emerald-400 hover:bg-emerald-950/20 hover:text-emerald-300"
                             onClick={() => void handleActivateStore(store.id)}
                           >
                             <Power className="mr-1 h-4 w-4" />
@@ -518,7 +578,7 @@ export function SuperAdmin() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="border-orange-600 text-orange-600"
+                            className="border-orange-700 bg-black text-orange-400 hover:bg-orange-950/20 hover:text-orange-300"
                             onClick={() => void handleSuspendStore(store.id)}
                           >
                             <Power className="mr-1 h-4 w-4" />
@@ -529,7 +589,7 @@ export function SuperAdmin() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="border-red-600 text-red-600"
+                          className="border-red-700 bg-black text-red-400 hover:bg-red-950/20 hover:text-red-300"
                           onClick={() => void handleDeleteStore(store.id, store.name)}
                         >
                           <Trash2 className="mr-1 h-4 w-4" />
@@ -544,38 +604,39 @@ export function SuperAdmin() {
           </TabsContent>
 
           <TabsContent value="plans" className="space-y-4">
-            <h2 className="text-xl font-semibold">Gerenciar Planos</h2>
+            <h2 className="text-2xl font-black tracking-tight text-white">Gerenciar Planos</h2>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {uniquePlans.map((plan) => (
-                <Card key={plan.id} className="p-6">
-                  <h3 className="mb-2 text-xl font-semibold">{plan.name}</h3>
-                  <p className="mb-4 text-3xl font-bold text-[#EA1D2C]">
+                <Card
+                  key={plan.id}
+                  className="rounded-[24px] border border-red-950/60 bg-[#090909] p-6 shadow-none"
+                >
+                  <h3 className="mb-2 text-2xl font-black text-white">{plan.name}</h3>
+                  <p className="mb-4 text-3xl font-black text-[#EA1D2C]">
                     {formatMoney(plan.price)}/mês
                   </p>
 
                   <div className="mb-4 space-y-2">
-                    <p className="text-sm text-gray-600">
-                      <strong>Max Produtos:</strong>{' '}
+                    <p className="text-sm text-zinc-400">
+                      <strong className="text-white">Max Produtos:</strong>{' '}
                       {plan.maxProducts === -1 ? 'Ilimitado' : plan.maxProducts}
                     </p>
-                    <p className="text-sm text-gray-600">
-                      <strong>Max Pedidos:</strong>{' '}
+                    <p className="text-sm text-zinc-400">
+                      <strong className="text-white">Max Pedidos:</strong>{' '}
                       {plan.maxOrders === -1 ? 'Ilimitado' : plan.maxOrders}
                     </p>
                   </div>
 
-                  <ul className="mb-4 space-y-1 text-sm">
+                  <ul className="mb-5 space-y-2 text-sm text-zinc-400">
                     {plan.features.map((feature, index) => (
-                      <li key={`${plan.id}-feature-${index}`} className="text-gray-600">
-                        • {feature}
-                      </li>
+                      <li key={`${plan.id}-feature-${index}`}>• {feature}</li>
                     ))}
                   </ul>
 
                   <Button
                     variant="outline"
-                    className="w-full"
+                    className="w-full border-red-900/60 bg-black text-white hover:bg-red-950/40 hover:text-white"
                     onClick={() => setEditingPlan(plan.id as EditablePlanId)}
                   >
                     <Settings className="mr-2 h-4 w-4" />
@@ -588,24 +649,29 @@ export function SuperAdmin() {
 
           <TabsContent value="ranking" className="space-y-4">
             <div className="mb-4 flex items-center gap-3">
-              <Trophy className="h-8 w-8 text-yellow-500" />
-              <h2 className="text-xl font-semibold">Top 5 Lojas com Mais Pedidos</h2>
+              <Trophy className="h-8 w-8 text-[#ffcc4d]" />
+              <h2 className="text-2xl font-black tracking-tight text-white">
+                Top 5 Lojas com Mais Pedidos
+              </h2>
             </div>
 
             <div className="space-y-3">
               {topStores.map((item, index) => (
-                <Card key={item.store.id} className="p-4 transition-shadow hover:shadow-lg">
-                  <div className="flex items-center gap-4">
+                <Card
+                  key={item.store.id}
+                  className="rounded-[24px] border border-red-950/60 bg-[#090909] p-5 shadow-none"
+                >
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center">
                     <div className="flex-shrink-0">
                       <div
-                        className={`flex h-12 w-12 items-center justify-center rounded-full text-xl font-bold ${
+                        className={`flex h-12 w-12 items-center justify-center rounded-full text-xl font-black ${
                           index === 0
-                            ? 'bg-yellow-500 text-white'
+                            ? 'bg-[#ffcc4d] text-black'
                             : index === 1
-                            ? 'bg-gray-400 text-white'
+                            ? 'bg-zinc-300 text-black'
                             : index === 2
-                            ? 'bg-orange-600 text-white'
-                            : 'bg-gray-200 text-gray-600'
+                            ? 'bg-orange-500 text-white'
+                            : 'bg-zinc-800 text-zinc-200'
                         }`}
                       >
                         {index + 1}
@@ -613,29 +679,29 @@ export function SuperAdmin() {
                     </div>
 
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold">{item.store.name}</h3>
-                      <p className="text-sm text-gray-500">{item.store.adminEmail || '-'}</p>
+                      <h3 className="text-lg font-black text-white">{item.store.name}</h3>
+                      <p className="text-sm text-zinc-500">{item.store.adminEmail || '-'}</p>
                     </div>
 
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-[#EA1D2C]">{item.orderCount}</p>
-                      <p className="text-sm text-gray-500">pedidos</p>
+                    <div className="text-left md:text-right">
+                      <p className="text-2xl font-black text-[#EA1D2C]">{item.orderCount}</p>
+                      <p className="text-sm text-zinc-500">pedidos</p>
                     </div>
 
-                    <div className="text-right">
-                      <p className="text-xl font-bold text-green-600">
+                    <div className="text-left md:text-right">
+                      <p className="text-xl font-black text-emerald-400">
                         {formatMoney(item.revenue)}
                       </p>
-                      <p className="text-sm text-gray-500">faturamento</p>
+                      <p className="text-sm text-zinc-500">faturamento</p>
                     </div>
                   </div>
                 </Card>
               ))}
 
               {topStores.length === 0 && (
-                <Card className="p-8 text-center">
-                  <Package className="mx-auto mb-3 h-12 w-12 text-gray-300" />
-                  <p className="text-gray-500">Nenhum pedido registrado ainda</p>
+                <Card className="rounded-[24px] border border-red-950/60 bg-[#090909] p-8 text-center shadow-none">
+                  <Package className="mx-auto mb-3 h-12 w-12 text-zinc-700" />
+                  <p className="text-zinc-500">Nenhum pedido registrado ainda</p>
                 </Card>
               )}
             </div>
@@ -650,54 +716,75 @@ export function SuperAdmin() {
           if (!open) setEditingStore(null);
         }}
       >
-        <DialogContent>
+        <DialogContent className="border border-red-950/60 bg-[#090909] text-white">
           <DialogHeader>
-            <DialogTitle>Editar Loja</DialogTitle>
-            <DialogDescription>Atualize as informações da loja</DialogDescription>
+            <DialogTitle className="text-white">Editar Loja</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              Atualize as informações da loja
+            </DialogDescription>
           </DialogHeader>
 
           {editingStore && (
             <form onSubmit={handleSaveStore} className="space-y-4">
               <div>
-                <Label htmlFor="name">Nome da Loja</Label>
-                <Input id="name" name="name" defaultValue={editingStore.name} required />
-              </div>
-
-              <div>
-                <Label htmlFor="whatsapp">WhatsApp</Label>
+                <Label htmlFor="name" className="text-zinc-200">
+                  Nome da Loja
+                </Label>
                 <Input
-                  id="whatsapp"
-                  name="whatsapp"
-                  defaultValue={editingStore.whatsapp || ''}
+                  id="name"
+                  name="name"
+                  defaultValue={editingStore.name}
+                  required
+                  className="border-red-950/60 bg-black text-white placeholder:text-zinc-500"
                 />
               </div>
 
               <div>
-                <Label htmlFor="storeUrl">Link da Loja</Label>
+                <Label htmlFor="whatsapp" className="text-zinc-200">
+                  WhatsApp
+                </Label>
+                <Input
+                  id="whatsapp"
+                  name="whatsapp"
+                  defaultValue={editingStore.whatsapp || ''}
+                  className="border-red-950/60 bg-black text-white placeholder:text-zinc-500"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="storeUrl" className="text-zinc-200">
+                  Link da Loja
+                </Label>
                 <Input
                   id="storeUrl"
                   name="storeUrl"
                   defaultValue={editingStore.storeUrl || ''}
                   placeholder="https://seudominio.com/loja"
+                  className="border-red-950/60 bg-black text-white placeholder:text-zinc-500"
                 />
               </div>
 
               <div>
-                <Label htmlFor="logoUrl">URL do Logo</Label>
+                <Label htmlFor="logoUrl" className="text-zinc-200">
+                  URL do Logo
+                </Label>
                 <Input
                   id="logoUrl"
                   name="logoUrl"
                   defaultValue={editingStore.logoUrl || ''}
+                  className="border-red-950/60 bg-black text-white placeholder:text-zinc-500"
                 />
               </div>
 
               <div>
-                <Label htmlFor="plan">Plano</Label>
+                <Label htmlFor="plan" className="text-zinc-200">
+                  Plano
+                </Label>
                 <select
                   id="plan"
                   name="plan"
                   defaultValue={editingStore.plan || 'iniciante'}
-                  className="w-full rounded border p-2"
+                  className="w-full rounded-md border border-red-950/60 bg-black p-2 text-white outline-none"
                 >
                   <option value="iniciante">Iniciante</option>
                   <option value="pro">Pro</option>
@@ -708,7 +795,7 @@ export function SuperAdmin() {
               <Button
                 type="submit"
                 disabled={isSavingStore}
-                className="w-full bg-purple-600 hover:bg-purple-700"
+                className="w-full bg-[#EA1D2C] text-white hover:bg-[#c81824]"
               >
                 {isSavingStore ? 'Salvando...' : 'Salvar Alterações'}
               </Button>
@@ -718,36 +805,41 @@ export function SuperAdmin() {
       </Dialog>
 
       <Dialog open={!!viewOrdersStore} onOpenChange={() => setViewOrdersStore(null)}>
-        <DialogContent className="max-h-[80vh] max-w-4xl overflow-y-auto">
+        <DialogContent className="max-h-[80vh] max-w-4xl overflow-y-auto border border-red-950/60 bg-[#090909] text-white">
           <DialogHeader>
-            <DialogTitle>Pedidos da Loja</DialogTitle>
+            <DialogTitle className="text-white">Pedidos da Loja</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-3">
             {storeOrders.length === 0 ? (
-              <p className="py-8 text-center text-gray-500">Nenhum pedido encontrado</p>
+              <p className="py-8 text-center text-zinc-500">Nenhum pedido encontrado</p>
             ) : (
               storeOrders.map((order) => (
-                <Card key={order.id} className="p-4">
-                  <div className="mb-2 flex items-start justify-between">
+                <Card
+                  key={order.id}
+                  className="rounded-[20px] border border-red-950/60 bg-black p-4 shadow-none"
+                >
+                  <div className="mb-2 flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-semibold">{order.code}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="font-bold text-white">{order.code}</p>
+                      <p className="text-sm text-zinc-500">
                         {new Date(order.createdAt).toLocaleString('pt-BR')}
                       </p>
                     </div>
-                    <Badge>{order.status}</Badge>
+                    <Badge className="border border-red-900/60 bg-red-950/30 text-zinc-100">
+                      {order.status}
+                    </Badge>
                   </div>
 
                   <div className="space-y-1 text-sm">
                     {order.items.map((item: OrderItem, index: number) => (
-                      <p key={`${order.id}-${index}`} className="text-gray-600">
+                      <p key={`${order.id}-${index}`} className="text-zinc-400">
                         {item.quantity}x {item.name || item.product?.name || 'Produto'}
                       </p>
                     ))}
                   </div>
 
-                  <p className="mt-2 text-lg font-bold text-[#EA1D2C]">
+                  <p className="mt-3 text-lg font-black text-[#EA1D2C]">
                     {formatMoney(order.total)}
                   </p>
                 </Card>
@@ -758,9 +850,9 @@ export function SuperAdmin() {
       </Dialog>
 
       <Dialog open={!!editingPlan} onOpenChange={() => setEditingPlan(null)}>
-        <DialogContent>
+        <DialogContent className="border border-red-950/60 bg-[#090909] text-white">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-white">
               Editar Plano {editingPlan && uniquePlans.find((plan) => plan.id === editingPlan)?.name}
             </DialogTitle>
           </DialogHeader>
@@ -774,7 +866,9 @@ export function SuperAdmin() {
                 return (
                   <>
                     <div>
-                      <Label htmlFor="price">Preço Mensal (R$)</Label>
+                      <Label htmlFor="price" className="text-zinc-200">
+                        Preço Mensal (R$)
+                      </Label>
                       <Input
                         id="price"
                         name="price"
@@ -782,42 +876,52 @@ export function SuperAdmin() {
                         step="0.01"
                         defaultValue={plan.price}
                         required
+                        className="border-red-950/60 bg-black text-white"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="maxProducts">Max Produtos (-1 = ilimitado)</Label>
+                      <Label htmlFor="maxProducts" className="text-zinc-200">
+                        Max Produtos (-1 = ilimitado)
+                      </Label>
                       <Input
                         id="maxProducts"
                         name="maxProducts"
                         type="number"
                         defaultValue={plan.maxProducts}
                         required
+                        className="border-red-950/60 bg-black text-white"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="maxOrders">Max Pedidos (-1 = ilimitado)</Label>
+                      <Label htmlFor="maxOrders" className="text-zinc-200">
+                        Max Pedidos (-1 = ilimitado)
+                      </Label>
                       <Input
                         id="maxOrders"
                         name="maxOrders"
                         type="number"
                         defaultValue={plan.maxOrders}
                         required
+                        className="border-red-950/60 bg-black text-white"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="features">Features (separadas por vírgula)</Label>
+                      <Label htmlFor="features" className="text-zinc-200">
+                        Features (separadas por vírgula)
+                      </Label>
                       <Input
                         id="features"
                         name="features"
                         defaultValue={plan.features.join(', ')}
                         required
+                        className="border-red-950/60 bg-black text-white"
                       />
                     </div>
 
-                    <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700">
+                    <Button type="submit" className="w-full bg-[#EA1D2C] text-white hover:bg-[#c81824]">
                       Salvar Plano
                     </Button>
                   </>
