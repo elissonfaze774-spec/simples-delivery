@@ -1,4 +1,4 @@
-import { ShoppingCart, LogIn, Package, LayoutDashboard, X } from 'lucide-react'
+import { ShoppingCart, LogIn, Package, LayoutDashboard, X, Moon, Clock3 } from 'lucide-react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
 import { useStore } from '../contexts/StoreContext'
@@ -102,6 +102,10 @@ export function Home() {
 
   const isStoreBlocked = !!store && (!store.active || store.suspended)
 
+  const openingTime = String((store as any)?.openingTime || '').trim()
+  const closingTime = String((store as any)?.closingTime || '').trim()
+  const hasBusinessHours = Boolean(openingTime && closingTime)
+
   useEffect(() => {
     if (isStoreBlocked) return
 
@@ -139,6 +143,7 @@ export function Home() {
   }
 
   const openExtrasModal = (product: any) => {
+    if (isStoreBlocked) return
     setSelectedProduct(product)
     setSelectedExtras([])
   }
@@ -181,23 +186,23 @@ export function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-[#EA1D2C] shadow-sm sticky top-0 z-20">
+    <div className={`min-h-screen ${isStoreBlocked ? 'bg-slate-950' : 'bg-gray-50'}`}>
+      <div className={`${isStoreBlocked ? 'bg-slate-900 border-b border-white/10' : 'bg-[#EA1D2C] shadow-sm'} sticky top-0 z-20`}>
         <div className="max-w-screen-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
             {store.logoUrl ? (
               <img
                 src={store.logoUrl}
                 alt={store.name}
-                className="w-8 h-8 rounded-full object-cover"
+                className={`w-8 h-8 rounded-full object-cover ${isStoreBlocked ? 'opacity-80' : ''}`}
               />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-base">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-base ${isStoreBlocked ? 'bg-white/10 text-white' : 'bg-white/20'}`}>
                 {store.logo || '🍔'}
               </div>
             )}
 
-            <h1 className="font-semibold text-white truncate">
+            <h1 className={`font-semibold truncate ${isStoreBlocked ? 'text-white' : 'text-white'}`}>
               {store.name}
             </h1>
           </div>
@@ -240,30 +245,61 @@ export function Home() {
         </div>
       </div>
 
-      <div className="max-w-screen-lg mx-auto">
+      <div className="max-w-screen-lg mx-auto relative">
         {store.banner ? (
           <img
             src={store.banner}
             alt="Banner"
-            className="w-full h-40 object-cover"
+            className={`w-full h-40 object-cover ${isStoreBlocked ? 'brightness-[0.35] grayscale' : ''}`}
           />
         ) : (
-          <div className="w-full h-40 bg-gray-200 flex items-center justify-center text-gray-500">
+          <div className={`w-full h-40 flex items-center justify-center ${isStoreBlocked ? 'bg-slate-900 text-slate-500' : 'bg-gray-200 text-gray-500'}`}>
             Banner da loja
           </div>
+        )}
+
+        {isStoreBlocked && (
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/20 via-slate-950/60 to-slate-950/90" />
         )}
       </div>
 
       {isStoreBlocked ? (
-        <div className="max-w-screen-lg mx-auto px-4 py-12">
-          <div className="bg-white rounded-2xl shadow-sm border p-8 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">
-              Loja temporariamente fechada
+        <div className="max-w-screen-lg mx-auto px-4 py-10">
+          <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-8 md:p-10 text-center shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] backdrop-blur-sm">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white/10 text-white">
+              <Moon className="h-8 w-8" />
+            </div>
+
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/50">
+              Luz apagada
+            </p>
+
+            <h2 className="mt-3 text-3xl font-bold text-white">
+              Loja fechada
             </h2>
 
-            <p className="text-gray-600 text-base">
+            <p className="mt-3 text-base text-white/70">
               No momento esta loja não está recebendo pedidos.
             </p>
+
+            {hasBusinessHours && (
+              <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80">
+                <Clock3 className="h-4 w-4" />
+                Funcionamento: {openingTime} às {closingTime}
+              </div>
+            )}
+
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-left">
+                <p className="text-sm text-white/50">Status atual</p>
+                <p className="mt-1 text-lg font-semibold text-white">Fechada</p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-left">
+                <p className="text-sm text-white/50">Pedidos</p>
+                <p className="mt-1 text-lg font-semibold text-white">Indisponíveis agora</p>
+              </div>
+            </div>
           </div>
         </div>
       ) : (
@@ -289,9 +325,18 @@ export function Home() {
           </div>
 
           <div className="max-w-screen-lg mx-auto px-4 py-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800">
-              {selectedCategoryName}
-            </h2>
+            <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <h2 className="text-xl font-semibold text-gray-800">
+                {selectedCategoryName}
+              </h2>
+
+              {hasBusinessHours && (
+                <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm text-gray-600 shadow-sm border">
+                  <Clock3 className="h-4 w-4 text-[#EA1D2C]" />
+                  {openingTime} às {closingTime}
+                </div>
+              )}
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {displayProducts.map(product => {
@@ -329,7 +374,7 @@ export function Home() {
                         <Button
                           size="sm"
                           onClick={() => openExtrasModal(product)}
-                          disabled={product.available === false}
+                          disabled={product.available === false || isStoreBlocked}
                           className="mt-2 w-full bg-[#EA1D2C] hover:bg-[#D01929]"
                         >
                           {product.available === false ? 'Indisponível' : 'Escolher adicionais'}
@@ -338,7 +383,7 @@ export function Home() {
                         <Button
                           size="sm"
                           onClick={() => addToCart(product, [])}
-                          disabled={product.available === false}
+                          disabled={product.available === false || isStoreBlocked}
                           className="mt-2 w-full bg-[#EA1D2C] hover:bg-[#D01929]"
                         >
                           {product.available === false ? 'Indisponível' : 'Adicionar'}
@@ -351,7 +396,7 @@ export function Home() {
             </div>
           </div>
 
-          {cartItemsCount > 0 && (
+          {cartItemsCount > 0 && !isStoreBlocked && (
             <div className="fixed bottom-4 right-4 md:bottom-8 md:right-8 z-30">
               <Button
                 size="lg"
@@ -370,7 +415,7 @@ export function Home() {
         </>
       )}
 
-      {selectedProduct && (
+      {selectedProduct && !isStoreBlocked && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] overflow-y-auto">
             <div className="relative p-5 border-b">
