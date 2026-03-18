@@ -10,6 +10,8 @@ import {
   Tag,
   TrendingUp,
   Wallet,
+  AlertCircle,
+  Moon,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -241,21 +243,69 @@ function RevenueChart({ data }: { data: DailyChartItem[] }) {
   );
 }
 
+function SuspensionNoticeCard({ isSuspended, isClosed }: { isSuspended: boolean; isClosed: boolean }) {
+  if (!isSuspended && !isClosed) return null;
+
+  return (
+    <div
+      className={`rounded-[28px] border p-5 ${
+        isSuspended
+          ? 'border-amber-500/20 bg-amber-500/10'
+          : 'border-blue-500/20 bg-blue-500/10'
+      }`}
+    >
+      <div className="flex items-start gap-4">
+        <div
+          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
+            isSuspended ? 'bg-amber-500/15 text-amber-300' : 'bg-blue-500/15 text-blue-300'
+          }`}
+        >
+          {isSuspended ? <AlertCircle className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        </div>
+
+        <div>
+          <h3 className="text-lg font-bold text-white">
+            {isSuspended ? 'Loja temporariamente indisponível' : 'Loja fechada no momento'}
+          </h3>
+
+          <p className="mt-2 text-sm text-zinc-300">
+            {isSuspended
+              ? 'No momento sua loja está com recebimento de pedidos temporariamente indisponível. Regularizando a conta, tudo volta ao normal.'
+              : 'Sua loja está fechada no momento. Os clientes continuam vendo a vitrine, mas não conseguem concluir pedidos até a reabertura.'}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function WelcomeCard({
   todayTotal,
   monthTotal,
   ticketAverage,
+  isSuspended,
+  isClosed,
 }: {
   todayTotal: number;
   monthTotal: number;
   ticketAverage: number;
+  isSuspended: boolean;
+  isClosed: boolean;
 }) {
   return (
     <DashboardSection eyebrow="Painel completo da loja">
       <div className="flex flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="inline-flex rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-sm font-semibold text-emerald-400">
-            Loja ativa
+          <div
+            className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${
+              isSuspended
+                ? 'border border-amber-500/25 bg-amber-500/10 text-amber-400'
+                : isClosed
+                ? 'border border-blue-500/25 bg-blue-500/10 text-blue-400'
+                : 'border border-emerald-500/25 bg-emerald-500/10 text-emerald-400'
+            }`}
+          >
+            {isSuspended ? 'Loja temporariamente indisponível' : isClosed ? 'Loja fechada' : 'Loja ativa'}
           </div>
         </div>
 
@@ -490,6 +540,9 @@ export function AdminDashboardPage() {
 
   useOrderNotifications(store?.id);
 
+  const isStoreSuspended = !!store?.suspended;
+  const isStoreClosed = !!store && !store.suspended && !store.active;
+
   const storeProducts = useMemo(() => {
     if (!store?.id || typeof getStoreProducts !== 'function') return [];
     return getStoreProducts(store.id) ?? [];
@@ -680,41 +733,111 @@ export function AdminDashboardPage() {
       }
       stats={isMobile ? [] : topStats}
     >
-      <div className="hidden lg:grid lg:grid-cols-12 lg:gap-6">
-        <div className="lg:col-span-8">
+      <div className="space-y-6">
+        <SuspensionNoticeCard isSuspended={isStoreSuspended} isClosed={isStoreClosed} />
+
+        <div className="hidden lg:grid lg:grid-cols-12 lg:gap-6">
+          <div className="lg:col-span-8">
+            <WelcomeCard
+              todayTotal={todayMetrics.total}
+              monthTotal={monthMetrics.total}
+              ticketAverage={monthMetrics.ticketAverage}
+              isSuspended={isStoreSuspended}
+              isClosed={isStoreClosed}
+            />
+          </div>
+
+          <div className="lg:col-span-4">
+            <StoreLinkCard
+              storeUrl={storeUrl}
+              onOpenStore={handleOpenStore}
+              onEditStore={goToSettings}
+            />
+          </div>
+
+          <div className="lg:col-span-12">
+            <ShortcutsSection shortcuts={shortcuts} />
+          </div>
+
+          <div className="lg:col-span-7">
+            <RevenueChart data={dailyChartData} />
+          </div>
+
+          <div className="lg:col-span-5">
+            <SummaryCardsSection
+              totalRevenue={totalRevenue}
+              monthCount={monthMetrics.count}
+              visibleProducts={visibleProducts.length}
+              storeCoupons={storeCoupons.length}
+            />
+          </div>
+
+          <div className="lg:col-span-12">
+            <MonthlySummarySection
+              monthTotal={monthMetrics.total}
+              monthCount={monthMetrics.count}
+              ticketAverage={monthMetrics.ticketAverage}
+              plan={store.plan}
+              whatsapp={store.whatsapp}
+              onOpenSettings={goToSettings}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-6 lg:hidden">
           <WelcomeCard
             todayTotal={todayMetrics.total}
             monthTotal={monthMetrics.total}
             ticketAverage={monthMetrics.ticketAverage}
+            isSuspended={isStoreSuspended}
+            isClosed={isStoreClosed}
           />
-        </div>
 
-        <div className="lg:col-span-4">
+          <div className="grid gap-4">
+            <SummaryCard
+              icon={Package}
+              label="Produtos"
+              value={String(visibleProducts.length)}
+              helper="Catálogo cadastrado"
+            />
+            <SummaryCard
+              icon={ShoppingBag}
+              label="Categorias"
+              value={String(storeCategories.length)}
+              helper="Organização do cardápio"
+            />
+            <SummaryCard
+              icon={TrendingUp}
+              label="Pedidos"
+              value={String(monthMetrics.count)}
+              helper="Movimento total"
+            />
+            <SummaryCard
+              icon={Wallet}
+              label="Receita"
+              value={formatMoney(totalRevenue)}
+              helper="Total acumulado"
+              money
+            />
+          </div>
+
           <StoreLinkCard
             storeUrl={storeUrl}
             onOpenStore={handleOpenStore}
             onEditStore={goToSettings}
           />
-        </div>
 
-        <div className="lg:col-span-12">
           <ShortcutsSection shortcuts={shortcuts} />
-        </div>
 
-        <div className="lg:col-span-7">
           <RevenueChart data={dailyChartData} />
-        </div>
 
-        <div className="lg:col-span-5">
           <SummaryCardsSection
             totalRevenue={totalRevenue}
             monthCount={monthMetrics.count}
             visibleProducts={visibleProducts.length}
             storeCoupons={storeCoupons.length}
           />
-        </div>
 
-        <div className="lg:col-span-12">
           <MonthlySummarySection
             monthTotal={monthMetrics.total}
             monthCount={monthMetrics.count}
@@ -724,68 +847,6 @@ export function AdminDashboardPage() {
             onOpenSettings={goToSettings}
           />
         </div>
-      </div>
-
-      <div className="space-y-6 lg:hidden">
-        <WelcomeCard
-          todayTotal={todayMetrics.total}
-          monthTotal={monthMetrics.total}
-          ticketAverage={monthMetrics.ticketAverage}
-        />
-
-        <div className="grid gap-4">
-          <SummaryCard
-            icon={Package}
-            label="Produtos"
-            value={String(visibleProducts.length)}
-            helper="Catálogo cadastrado"
-          />
-          <SummaryCard
-            icon={ShoppingBag}
-            label="Categorias"
-            value={String(storeCategories.length)}
-            helper="Organização do cardápio"
-          />
-          <SummaryCard
-            icon={TrendingUp}
-            label="Pedidos"
-            value={String(monthMetrics.count)}
-            helper="Movimento total"
-          />
-          <SummaryCard
-            icon={Wallet}
-            label="Receita"
-            value={formatMoney(totalRevenue)}
-            helper="Total acumulado"
-            money
-          />
-        </div>
-
-        <StoreLinkCard
-          storeUrl={storeUrl}
-          onOpenStore={handleOpenStore}
-          onEditStore={goToSettings}
-        />
-
-        <ShortcutsSection shortcuts={shortcuts} />
-
-        <RevenueChart data={dailyChartData} />
-
-        <SummaryCardsSection
-          totalRevenue={totalRevenue}
-          monthCount={monthMetrics.count}
-          visibleProducts={visibleProducts.length}
-          storeCoupons={storeCoupons.length}
-        />
-
-        <MonthlySummarySection
-          monthTotal={monthMetrics.total}
-          monthCount={monthMetrics.count}
-          ticketAverage={monthMetrics.ticketAverage}
-          plan={store.plan}
-          whatsapp={store.whatsapp}
-          onOpenSettings={goToSettings}
-        />
       </div>
     </AdminShell>
   );

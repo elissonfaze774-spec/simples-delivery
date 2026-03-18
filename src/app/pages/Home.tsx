@@ -1,4 +1,4 @@
-import { ShoppingCart, LogIn, Package, LayoutDashboard, X, Moon, Clock3 } from 'lucide-react'
+import { ShoppingCart, LogIn, Package, LayoutDashboard, X, Moon, Clock3, AlertCircle } from 'lucide-react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
 import { useStore } from '../contexts/StoreContext'
@@ -105,7 +105,9 @@ export function Home() {
 
   const categories = store ? getStoreCategories(store.id) : []
 
-  const isStoreBlocked = !!store && (!store.active || store.suspended)
+  const isStoreSuspended = !!store?.suspended
+  const isStoreClosed = !!store && !store.suspended && !store.active
+  const isStoreBlocked = isStoreSuspended || isStoreClosed
 
   const openingTime = String((store as any)?.openingTime || '').trim()
   const closingTime = String((store as any)?.closingTime || '').trim()
@@ -113,7 +115,6 @@ export function Home() {
 
   const themeColor = normalizeThemeColor((store as any)?.themeColor)
   const themeSoft = `${themeColor}14`
-  const themeMedium = `${themeColor}22`
 
   useEffect(() => {
     if (isStoreBlocked) return
@@ -277,7 +278,39 @@ export function Home() {
         )}
       </div>
 
-      {isStoreBlocked ? (
+      {isStoreSuspended ? (
+        <div className="max-w-screen-lg mx-auto px-4 py-10">
+          <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-8 md:p-10 text-center shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] backdrop-blur-sm">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white/10 text-white">
+              <AlertCircle className="h-8 w-8" />
+            </div>
+
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/50">
+              Atendimento indisponível
+            </p>
+
+            <h2 className="mt-3 text-3xl font-bold text-white">
+              No momento esta loja não está recebendo pedidos
+            </h2>
+
+            <p className="mt-3 mx-auto max-w-2xl text-base text-white/70">
+              Estamos temporariamente sem atendimento neste momento. Tente novamente mais tarde.
+            </p>
+
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-left">
+                <p className="text-sm text-white/50">Status atual</p>
+                <p className="mt-1 text-lg font-semibold text-white">Indisponível temporariamente</p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-left">
+                <p className="text-sm text-white/50">Pedidos</p>
+                <p className="mt-1 text-lg font-semibold text-white">Pausados no momento</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : isStoreClosed ? (
         <div className="max-w-screen-lg mx-auto px-4 py-10">
           <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-8 md:p-10 text-center shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] backdrop-blur-sm">
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white/10 text-white">

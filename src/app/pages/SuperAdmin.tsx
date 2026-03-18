@@ -441,8 +441,8 @@ export function SuperAdmin() {
   const handleCreateAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
+    const anonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
 
     const payload = {
       name: createAdminForm.name.trim(),
