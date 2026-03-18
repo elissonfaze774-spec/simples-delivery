@@ -90,7 +90,8 @@ export interface Store {
   plan?: 'iniciante' | 'pro' | 'premium';
   deliveryFee?: number;
   openingTime?: string;
-closingTime?: string;
+  closingTime?: string;
+  themeColor?: string;
 }
 
 export interface Plan {

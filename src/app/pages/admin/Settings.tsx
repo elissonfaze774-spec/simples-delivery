@@ -8,6 +8,7 @@ import {
   Wallet,
   Clock3,
   Power,
+  Palette,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
@@ -28,6 +29,25 @@ function formatMoney(value: number) {
     currency: 'BRL',
   });
 }
+
+const themePresets = [
+  '#EA1D2C',
+  '#7C3AED',
+  '#9333EA',
+  '#2563EB',
+  '#0EA5E9',
+  '#10B981',
+  '#22C55E',
+  '#84CC16',
+  '#EAB308',
+  '#F59E0B',
+  '#F97316',
+  '#EC4899',
+  '#14B8A6',
+  '#64748B',
+  '#111827',
+  '#000000',
+];
 
 export function AdminSettings() {
   const navigate = useNavigate();
@@ -100,6 +120,11 @@ export function AdminSettings() {
 
   const currentOpeningTime = String((resolvedStore as any).openingTime || '').trim();
   const currentClosingTime = String((resolvedStore as any).closingTime || '').trim();
+  const currentThemeColor = String(
+    (resolvedStore as any).themeColor ||
+      (resolvedStore as any).theme_color ||
+      '#EA1D2C'
+  ).trim() || '#EA1D2C';
 
   const handleCopyLink = async () => {
     try {
@@ -138,6 +163,7 @@ export function AdminSettings() {
     const openingTime = String(formData.get('openingTime') || '').trim();
     const closingTime = String(formData.get('closingTime') || '').trim();
     const active = String(formData.get('active') || 'true') === 'true';
+    const themeColor = String(formData.get('themeColor') || '#EA1D2C').trim() || '#EA1D2C';
 
     if (!name) {
       toast.error('Informe o nome da loja.');
@@ -161,6 +187,7 @@ export function AdminSettings() {
       active,
       openingTime,
       closingTime,
+      themeColor,
       logo: logo || currentLogoFallback || '🍔',
       logoUrl: logoUrl || currentLogoUrl || '',
       banner: banner || currentBanner || '',
@@ -261,7 +288,7 @@ export function AdminSettings() {
 
         <Card className="rounded-[28px] border-0 bg-white p-6 shadow-[0_24px_70px_-45px_rgba(15,23,42,0.65)]">
           <div className="mb-6">
-            <p className="text-sm text-slate-500">Aparência, contato e entrega</p>
+            <p className="text-sm text-slate-500">Aparência, contato, entrega e tema</p>
             <h2 className="text-2xl font-bold text-slate-950">Informações da loja</h2>
           </div>
 
@@ -382,6 +409,55 @@ export function AdminSettings() {
                     className="h-12 rounded-2xl pl-10"
                   />
                 </div>
+              </div>
+
+              <div className="md:col-span-2 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <Palette className="h-4 w-4 text-[#EA1D2C]" />
+                  <p className="text-sm font-semibold text-slate-900">Cor do tema da loja</p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-[140px_1fr]">
+                  <div>
+                    <Label htmlFor="themeColor">Escolher cor</Label>
+                    <Input
+                      id="themeColor"
+                      name="themeColor"
+                      type="color"
+                      defaultValue={currentThemeColor}
+                      className="mt-2 h-12 w-full cursor-pointer rounded-2xl p-2"
+                    />
+                  </div>
+
+                  <div>
+                    <p className="mb-2 text-sm text-slate-500">Cores rápidas</p>
+                    <div className="flex flex-wrap gap-2">
+                      {themePresets.map((color) => (
+                        <label
+                          key={color}
+                          className="relative cursor-pointer"
+                          title={color}
+                        >
+                          <input
+                            type="radio"
+                            name="themeColor"
+                            value={color}
+                            defaultChecked={currentThemeColor.toLowerCase() === color.toLowerCase()}
+                            className="peer sr-only"
+                          />
+                          <span
+                            className="block h-10 w-10 rounded-full border-2 border-white shadow ring-1 ring-slate-200 peer-checked:scale-110 peer-checked:ring-2 peer-checked:ring-slate-900"
+                            style={{ backgroundColor: color }}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <p className="mt-3 text-xs text-slate-500">
+                  Essa cor será usada na vitrine da loja para botões, topo e destaques.
+                </p>
               </div>
 
               <div className="md:col-span-2">

@@ -44,6 +44,11 @@ function normalizeExtras(extras: any): ProductExtra[] {
     .filter((item): item is ProductExtra => item !== null)
 }
 
+function normalizeThemeColor(value: unknown) {
+  const color = String(value || '').trim()
+  return /^#([0-9a-fA-F]{6})$/.test(color) ? color : '#EA1D2C'
+}
+
 export function Home() {
   const navigate = useNavigate()
   const { slug } = useParams()
@@ -105,6 +110,10 @@ export function Home() {
   const openingTime = String((store as any)?.openingTime || '').trim()
   const closingTime = String((store as any)?.closingTime || '').trim()
   const hasBusinessHours = Boolean(openingTime && closingTime)
+
+  const themeColor = normalizeThemeColor((store as any)?.themeColor)
+  const themeSoft = `${themeColor}14`
+  const themeMedium = `${themeColor}22`
 
   useEffect(() => {
     if (isStoreBlocked) return
@@ -187,7 +196,10 @@ export function Home() {
 
   return (
     <div className={`min-h-screen ${isStoreBlocked ? 'bg-slate-950' : 'bg-gray-50'}`}>
-      <div className={`${isStoreBlocked ? 'bg-slate-900 border-b border-white/10' : 'bg-[#EA1D2C] shadow-sm'} sticky top-0 z-20`}>
+      <div
+        className={`${isStoreBlocked ? 'bg-slate-900 border-b border-white/10' : 'shadow-sm'} sticky top-0 z-20`}
+        style={isStoreBlocked ? undefined : { backgroundColor: themeColor }}
+      >
         <div className="max-w-screen-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
             {store.logoUrl ? (
@@ -197,12 +209,14 @@ export function Home() {
                 className={`w-8 h-8 rounded-full object-cover ${isStoreBlocked ? 'opacity-80' : ''}`}
               />
             ) : (
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-base ${isStoreBlocked ? 'bg-white/10 text-white' : 'bg-white/20'}`}>
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-base ${isStoreBlocked ? 'bg-white/10 text-white' : 'bg-white/20'}`}
+              >
                 {store.logo || '🍔'}
               </div>
             )}
 
-            <h1 className={`font-semibold truncate ${isStoreBlocked ? 'text-white' : 'text-white'}`}>
+            <h1 className="font-semibold truncate text-white">
               {store.name}
             </h1>
           </div>
@@ -311,13 +325,25 @@ export function Home() {
                   <button
                     key={category.id}
                     onClick={() => setSelectedCategory(category.id)}
-                    className={`px-4 py-2 rounded-full whitespace-nowrap transition-colors ${
+                    className="px-4 py-2 rounded-full whitespace-nowrap transition-colors"
+                    style={
                       selectedCategory === category.id
-                        ? 'bg-[#EA1D2C] text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                        ? {
+                            backgroundColor: themeColor,
+                            color: '#ffffff'
+                          }
+                        : undefined
+                    }
                   >
-                    {category.name}
+                    <span
+                      className={
+                        selectedCategory === category.id
+                          ? ''
+                          : 'text-gray-700'
+                      }
+                    >
+                      {category.name}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -332,7 +358,7 @@ export function Home() {
 
               {hasBusinessHours && (
                 <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm text-gray-600 shadow-sm border">
-                  <Clock3 className="h-4 w-4 text-[#EA1D2C]" />
+                  <Clock3 className="h-4 w-4" style={{ color: themeColor }} />
                   {openingTime} às {closingTime}
                 </div>
               )}
@@ -365,7 +391,7 @@ export function Home() {
                           </p>
                         )}
 
-                        <p className="text-lg font-semibold text-[#EA1D2C] mt-1">
+                        <p className="text-lg font-semibold mt-1" style={{ color: themeColor }}>
                           {formatMoney(product.price)}
                         </p>
                       </div>
@@ -375,7 +401,8 @@ export function Home() {
                           size="sm"
                           onClick={() => openExtrasModal(product)}
                           disabled={product.available === false || isStoreBlocked}
-                          className="mt-2 w-full bg-[#EA1D2C] hover:bg-[#D01929]"
+                          className="mt-2 w-full text-white"
+                          style={{ backgroundColor: themeColor }}
                         >
                           {product.available === false ? 'Indisponível' : 'Escolher adicionais'}
                         </Button>
@@ -384,7 +411,8 @@ export function Home() {
                           size="sm"
                           onClick={() => addToCart(product, [])}
                           disabled={product.available === false || isStoreBlocked}
-                          className="mt-2 w-full bg-[#EA1D2C] hover:bg-[#D01929]"
+                          className="mt-2 w-full text-white"
+                          style={{ backgroundColor: themeColor }}
                         >
                           {product.available === false ? 'Indisponível' : 'Adicionar'}
                         </Button>
@@ -401,12 +429,13 @@ export function Home() {
               <Button
                 size="lg"
                 onClick={() => navigate(`/cart?store=${store.id}`)}
-                className="rounded-full shadow-lg relative bg-[#EA1D2C] hover:bg-[#D01929]"
+                className="rounded-full shadow-lg relative text-white"
+                style={{ backgroundColor: themeColor }}
               >
                 <ShoppingCart className="w-5 h-5 mr-2" />
                 Ver Carrinho
 
-                <Badge className="ml-2 bg-white text-[#EA1D2C]">
+                <Badge className="ml-2 bg-white" style={{ color: themeColor }}>
                   {cartItemsCount}
                 </Badge>
               </Button>
@@ -437,7 +466,7 @@ export function Home() {
                   </p>
                 )}
 
-                <p className="text-lg font-semibold text-[#EA1D2C] mt-2">
+                <p className="text-lg font-semibold mt-2" style={{ color: themeColor }}>
                   {formatMoney(selectedProduct.price)}
                 </p>
               </div>
@@ -462,18 +491,19 @@ export function Home() {
                   return (
                     <label
                       key={`${extra.name}-${index}`}
-                      className={`flex items-center justify-between rounded-2xl border p-4 cursor-pointer transition-colors ${
-                        checked
-                          ? 'border-[#EA1D2C] bg-red-50'
-                          : 'border-gray-200 bg-white'
-                      }`}
+                      className="flex items-center justify-between rounded-2xl border p-4 cursor-pointer transition-colors"
+                      style={{
+                        borderColor: checked ? themeColor : '#e5e7eb',
+                        backgroundColor: checked ? themeSoft : '#ffffff'
+                      }}
                     >
                       <div className="flex items-center gap-3">
                         <input
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleExtra(extra)}
-                          className="h-4 w-4 accent-[#EA1D2C]"
+                          className="h-4 w-4"
+                          style={{ accentColor: themeColor }}
                         />
 
                         <div>
@@ -487,7 +517,7 @@ export function Home() {
                         </div>
                       </div>
 
-                      <span className="font-semibold text-[#EA1D2C]">
+                      <span className="font-semibold" style={{ color: themeColor }}>
                         + {formatMoney(extra.price)}
                       </span>
                     </label>
@@ -517,7 +547,8 @@ export function Home() {
                   addToCart(selectedProduct, selectedExtras)
                   closeExtrasModal()
                 }}
-                className="w-full h-12 bg-[#EA1D2C] hover:bg-[#D01929]"
+                className="w-full h-12 text-white"
+                style={{ backgroundColor: themeColor }}
               >
                 Adicionar ao carrinho
               </Button>

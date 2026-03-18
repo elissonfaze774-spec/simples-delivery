@@ -124,6 +124,11 @@ function buildStoreUrl(slug?: string) {
   return `${origin}/loja/${encodeURIComponent(slug || '')}`;
 }
 
+function normalizeThemeColor(value: unknown) {
+  const color = String(value ?? '').trim();
+  return /^#([0-9a-fA-F]{6})$/.test(color) ? color : '#EA1D2C';
+}
+
 function getCache<T>(key: string): T[] {
   try {
     if (typeof window === 'undefined') return [];
@@ -178,6 +183,7 @@ function normalizeStore(store: any): Store {
     deliveryFee: Number(store?.deliveryFee ?? store?.delivery_fee ?? 0),
     openingTime: String(store?.opening_time ?? store?.openingTime ?? ''),
     closingTime: String(store?.closing_time ?? store?.closingTime ?? ''),
+    themeColor: normalizeThemeColor(store?.theme_color ?? store?.themeColor),
   };
 }
 
@@ -257,7 +263,9 @@ function mergePlansWithDefaults(list: Plan[]): Plan[] {
 }
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [stores, setStores] = useState<Store[]>(() => getCache<Store>(STORE_CACHE_KEY).map(normalizeStore));
+  const [stores, setStores] = useState<Store[]>(() =>
+    getCache<Store>(STORE_CACHE_KEY).map(normalizeStore)
+  );
   const [products, setProducts] = useState<Product[]>(() =>
     getCache<Product>(PRODUCTS_CACHE_KEY).map(normalizeProduct)
   );
@@ -392,6 +400,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (data.logo !== undefined) payload.logo = data.logo;
       if (data.banner !== undefined) payload.banner = data.banner;
       if (data.whatsapp !== undefined) payload.whatsapp = data.whatsapp;
+      if ((data as any).themeColor !== undefined) {
+        payload.theme_color = normalizeThemeColor((data as any).themeColor);
+      }
 
       if (data.active !== undefined) {
         payload.is_active = data.active;
@@ -404,8 +415,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (data.plan !== undefined) payload.plan = data.plan;
       if ((data as any).suspended !== undefined) payload.suspended = (data as any).suspended;
       if (data.deliveryFee !== undefined) payload.delivery_fee = Number(data.deliveryFee || 0);
-      if ((data as any).openingTime !== undefined) payload.opening_time = String((data as any).openingTime || '');
-      if ((data as any).closingTime !== undefined) payload.closing_time = String((data as any).closingTime || '');
+      if ((data as any).openingTime !== undefined) {
+        payload.opening_time = String((data as any).openingTime || '');
+      }
+      if ((data as any).closingTime !== undefined) {
+        payload.closing_time = String((data as any).closingTime || '');
+      }
 
       const { error } = await supabase.from('stores').update(payload).eq('id', id);
       if (error) throw error;
@@ -595,6 +610,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         store_url: buildStoreUrl(slug),
         opening_time: '',
         closing_time: '',
+        theme_color: '#EA1D2C',
       };
 
       const { data, error } = await supabase.from('stores').insert(payload).select().single();
