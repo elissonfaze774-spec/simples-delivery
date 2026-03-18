@@ -392,7 +392,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (data.logo !== undefined) payload.logo = data.logo;
       if (data.banner !== undefined) payload.banner = data.banner;
       if (data.whatsapp !== undefined) payload.whatsapp = data.whatsapp;
-      if (data.active !== undefined) payload.is_active = data.active;
+
+      if (data.active !== undefined) {
+        payload.is_active = data.active;
+        payload.active = data.active;
+      }
+
       if (data.adminEmail !== undefined) payload.admin_email = normalizeEmail(data.adminEmail);
       if (data.logoUrl !== undefined) payload.logo_url = data.logoUrl;
       if (data.storeUrl !== undefined) payload.store_url = data.storeUrl;
@@ -411,46 +416,46 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const addProduct = useCallback(
-  async (product: Product) => {
-    const payload = {
-      name: product.name,
-      price: Number(product.price || 0),
-      image: product.image || '',
-      description: product.description || '',
-      extras: product.extras || [],
-      store_id: product.storeId,
-      category_id: product.categoryId || null,
-      is_available: product.available ?? true,
-    };
+    async (product: Product) => {
+      const payload = {
+        name: product.name,
+        price: Number(product.price || 0),
+        image: product.image || '',
+        description: product.description || '',
+        extras: product.extras || [],
+        store_id: product.storeId,
+        category_id: product.categoryId || null,
+        is_available: product.available ?? true,
+      };
 
-    const { error } = await supabase.from('products').insert(payload);
-    if (error) throw error;
+      const { error } = await supabase.from('products').insert(payload);
+      if (error) throw error;
 
-    await reloadStoreData();
-  },
-  [reloadStoreData]
-);
+      await reloadStoreData();
+    },
+    [reloadStoreData]
+  );
 
   const updateProduct = useCallback(
-  async (id: string, data: Partial<Product>) => {
-    const payload: any = {};
+    async (id: string, data: Partial<Product>) => {
+      const payload: any = {};
 
-    if (data.name !== undefined) payload.name = data.name;
-    if (data.price !== undefined) payload.price = Number(data.price || 0);
-    if (data.image !== undefined) payload.image = data.image;
-    if (data.description !== undefined) payload.description = data.description;
-    if (data.extras !== undefined) payload.extras = data.extras;
-    if (data.storeId !== undefined) payload.store_id = data.storeId;
-    if (data.categoryId !== undefined) payload.category_id = data.categoryId || null;
-    if (data.available !== undefined) payload.is_available = data.available;
+      if (data.name !== undefined) payload.name = data.name;
+      if (data.price !== undefined) payload.price = Number(data.price || 0);
+      if (data.image !== undefined) payload.image = data.image;
+      if (data.description !== undefined) payload.description = data.description;
+      if (data.extras !== undefined) payload.extras = data.extras;
+      if (data.storeId !== undefined) payload.store_id = data.storeId;
+      if (data.categoryId !== undefined) payload.category_id = data.categoryId || null;
+      if (data.available !== undefined) payload.is_available = data.available;
 
-    const { error } = await supabase.from('products').update(payload).eq('id', id);
-    if (error) throw error;
+      const { error } = await supabase.from('products').update(payload).eq('id', id);
+      if (error) throw error;
 
-    await reloadStoreData();
-  },
-  [reloadStoreData]
-);
+      await reloadStoreData();
+    },
+    [reloadStoreData]
+  );
 
   const deleteProduct = useCallback(
     async (id: string) => {
@@ -553,10 +558,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const current = stores.find((store) => String(store.id) === String(id));
       if (!current) throw new Error('Loja não encontrada.');
 
+      const nextActive = !current.active;
+
       const { error } = await supabase
         .from('stores')
         .update({
-          is_active: !current.active,
+          is_active: nextActive,
+          active: nextActive,
           suspended: false,
         })
         .eq('id', id);
@@ -577,6 +585,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         slug,
         admin_email: normalizeEmail(email),
         is_active: true,
+        active: true,
         suspended: false,
         logo: '',
         banner: '',
@@ -584,6 +593,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         delivery_fee: 0,
         plan: 'iniciante',
         store_url: buildStoreUrl(slug),
+        opening_time: '',
+        closing_time: '',
       };
 
       const { data, error } = await supabase.from('stores').insert(payload).select().single();
@@ -602,6 +613,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         .from('stores')
         .update({
           is_active: false,
+          active: false,
           suspended: true,
         })
         .eq('id', id);
