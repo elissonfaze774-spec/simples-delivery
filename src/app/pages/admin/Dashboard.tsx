@@ -15,6 +15,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useStore } from '../../contexts/StoreContext';
 import { useOrders } from '../../contexts/OrderContext';
+import { useOrderNotifications } from '../../hooks/useOrderNotifications';
 import { Button } from '../../components/ui/button';
 import { AdminShell } from '../../components/admin/AdminShell';
 import { getStoreUrl } from '../../lib/urls';
@@ -487,6 +488,8 @@ export function AdminDashboardPage() {
     return stores?.[0];
   }, [getStoreByAdminEmail, stores, user?.email]);
 
+  useOrderNotifications(store?.id);
+
   const storeProducts = useMemo(() => {
     if (!store?.id || typeof getStoreProducts !== 'function') return [];
     return getStoreProducts(store.id) ?? [];
@@ -595,34 +598,34 @@ export function AdminDashboardPage() {
   };
 
   const shortcuts = useMemo<ShortcutItem[]>(
-  () => [
-    {
-      label: 'Produtos',
-      description: 'Criar, editar e organizar itens',
-      icon: Package,
-      onClick: goToProducts,
-    },
-    {
-      label: 'Categorias',
-      description: 'Gerenciar categorias da loja',
-      icon: ShoppingBag,
-      onClick: goToProducts,
-    },
-    {
-      label: 'Pedidos',
-      description: 'Acompanhar pedidos da loja',
-      icon: TrendingUp,
-      onClick: () => goTo('orders'),
-    },
-    {
-      label: 'Cupons',
-      description: 'Criar descontos e campanhas',
-      icon: Tag,
-      onClick: () => goTo('coupons'),
-    },
-  ],
-  [adminBase]
-);
+    () => [
+      {
+        label: 'Produtos',
+        description: 'Criar, editar e organizar itens',
+        icon: Package,
+        onClick: goToProducts,
+      },
+      {
+        label: 'Categorias',
+        description: 'Gerenciar categorias da loja',
+        icon: ShoppingBag,
+        onClick: goToProducts,
+      },
+      {
+        label: 'Pedidos',
+        description: 'Acompanhar pedidos da loja',
+        icon: TrendingUp,
+        onClick: () => goTo('orders'),
+      },
+      {
+        label: 'Cupons',
+        description: 'Criar descontos e campanhas',
+        icon: Tag,
+        onClick: () => goTo('coupons'),
+      },
+    ],
+    [adminBase]
+  );
 
   const visibleProducts = useMemo(() => {
     return storeProducts.filter((product: any) => product?.isActive !== false);
