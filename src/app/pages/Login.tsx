@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, ShieldCheck, LogIn, MessageCircle } from 'lucide-react';
+import { ShieldCheck, LogIn, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useStore } from '../contexts/StoreContext';
@@ -67,17 +67,7 @@ export function Login() {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(255,0,51,0.16),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(255,0,51,0.10),_transparent_28%),linear-gradient(180deg,_#050505_0%,_#090909_45%,_#0d0607_100%)] text-white">
       <header className="border-b border-white/10 bg-black/30 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-4">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/loja')}
-            className="rounded-full border border-red-500/20 bg-black/40 text-zinc-300 hover:bg-red-500/10 hover:text-white"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-
+        <div className="mx-auto max-w-6xl px-4 py-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-red-400">
               Acesso administrativo
