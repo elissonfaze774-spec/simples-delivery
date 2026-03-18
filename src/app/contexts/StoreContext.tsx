@@ -176,6 +176,8 @@ function normalizeStore(store: any): Store {
         ? store.isSuspended
         : false,
     deliveryFee: Number(store?.deliveryFee ?? store?.delivery_fee ?? 0),
+    openingTime: String(store?.opening_time ?? store?.openingTime ?? ''),
+    closingTime: String(store?.closing_time ?? store?.closingTime ?? ''),
   };
 }
 
@@ -397,6 +399,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (data.plan !== undefined) payload.plan = data.plan;
       if ((data as any).suspended !== undefined) payload.suspended = (data as any).suspended;
       if (data.deliveryFee !== undefined) payload.delivery_fee = Number(data.deliveryFee || 0);
+      if ((data as any).openingTime !== undefined) payload.opening_time = String((data as any).openingTime || '');
+      if ((data as any).closingTime !== undefined) payload.closing_time = String((data as any).closingTime || '');
 
       const { error } = await supabase.from('stores').update(payload).eq('id', id);
       if (error) throw error;

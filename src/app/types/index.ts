@@ -89,6 +89,8 @@ export interface Store {
   storeUrl?: string;
   plan?: 'iniciante' | 'pro' | 'premium';
   deliveryFee?: number;
+  openingTime?: string;
+closingTime?: string;
 }
 
 export interface Plan {

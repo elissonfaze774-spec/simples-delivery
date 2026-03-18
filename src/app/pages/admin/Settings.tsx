@@ -6,6 +6,8 @@ import {
   QrCode as QrCodeIcon,
   Store as StoreIcon,
   Wallet,
+  Clock3,
+  Power,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
@@ -90,15 +92,14 @@ export function AdminSettings() {
 
   const currentLogoFallback = String((resolvedStore as any).logo || '').trim();
   const currentLogoUrl = String(
-    (resolvedStore as any).logoUrl ||
-      (resolvedStore as any).logo_url ||
-      ''
+    (resolvedStore as any).logoUrl || (resolvedStore as any).logo_url || ''
   ).trim();
   const currentBanner = String(
-    (resolvedStore as any).banner ||
-      (resolvedStore as any).banner_url ||
-      ''
+    (resolvedStore as any).banner || (resolvedStore as any).banner_url || ''
   ).trim();
+
+  const currentOpeningTime = String((resolvedStore as any).openingTime || '').trim();
+  const currentClosingTime = String((resolvedStore as any).closingTime || '').trim();
 
   const handleCopyLink = async () => {
     try {
@@ -117,9 +118,7 @@ export function AdminSettings() {
     if (saving) return;
 
     if (!isLoaded || !resolvedStore) {
-      toast.error(
-        'Dados da loja ainda estão sendo carregados. Aguarde alguns instantes e tente novamente.'
-      );
+      toast.error('Dados da loja ainda estão sendo carregados.');
       return;
     }
 
@@ -136,6 +135,9 @@ export function AdminSettings() {
     const banner = String(formData.get('banner') || '').trim();
     const whatsapp = String(formData.get('whatsapp') || '').replace(/\D/g, '');
     const deliveryFee = Math.max(Number(rawDeliveryFee || 0), 0);
+    const openingTime = String(formData.get('openingTime') || '').trim();
+    const closingTime = String(formData.get('closingTime') || '').trim();
+    const active = String(formData.get('active') || 'true') === 'true';
 
     if (!name) {
       toast.error('Informe o nome da loja.');
@@ -156,6 +158,9 @@ export function AdminSettings() {
       name,
       whatsapp,
       deliveryFee,
+      active,
+      openingTime,
+      closingTime,
       logo: logo || currentLogoFallback || '🍔',
       logoUrl: logoUrl || currentLogoUrl || '',
       banner: banner || currentBanner || '',
@@ -318,8 +323,65 @@ export function AdminSettings() {
               </div>
 
               <div className="flex items-end rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                Valor atual da entrega:{' '}
+                Valor atual da entrega:
                 <span className="ml-2 font-semibold">{formatMoney(currentDeliveryFee)}</span>
+              </div>
+
+              <div className="md:col-span-2 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <Power className="h-4 w-4 text-[#EA1D2C]" />
+                  <p className="text-sm font-semibold text-slate-900">Status da loja</p>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <input
+                      type="radio"
+                      name="active"
+                      value="true"
+                      defaultChecked={isStoreActive}
+                    />
+                    <span className="text-sm font-medium text-slate-800">Loja aberta</span>
+                  </label>
+
+                  <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <input
+                      type="radio"
+                      name="active"
+                      value="false"
+                      defaultChecked={!isStoreActive}
+                    />
+                    <span className="text-sm font-medium text-slate-800">Loja fechada</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="openingTime">Abre às</Label>
+                <div className="relative mt-2">
+                  <Clock3 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    id="openingTime"
+                    name="openingTime"
+                    type="time"
+                    defaultValue={currentOpeningTime}
+                    className="h-12 rounded-2xl pl-10"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="closingTime">Fecha às</Label>
+                <div className="relative mt-2">
+                  <Clock3 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    id="closingTime"
+                    name="closingTime"
+                    type="time"
+                    defaultValue={currentClosingTime}
+                    className="h-12 rounded-2xl pl-10"
+                  />
+                </div>
               </div>
 
               <div className="md:col-span-2">
