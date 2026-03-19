@@ -1,4 +1,4 @@
-import { Package, Search, Trash2, ShoppingBag, CheckSquare } from 'lucide-react';
+import { Package, Search, Trash2, ShoppingBag, CheckSquare, Printer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -55,7 +55,7 @@ const statusMap: Record<OrderStatus, { label: string; badgeClass: string; select
 };
 
 function formatMoney(value: number) {
-  return value.toLocaleString('pt-BR', {
+  return Number(value || 0).toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',
   });
@@ -70,6 +70,15 @@ function isToday(dateValue: string) {
     date.getMonth() === now.getMonth() &&
     date.getFullYear() === now.getFullYear()
   );
+}
+
+function escapeHtml(value: unknown) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 type OrderViewMode = 'all' | 'today';
@@ -137,6 +146,319 @@ export function AdminOrders() {
   useEffect(() => {
     setSelectedIds((prev) => prev.filter((id) => filteredOrders.some((order) => order.id === id)));
   }, [filteredOrders]);
+
+  const handlePrintOrder = (order: any) => {
+    try {
+      const printWindow = window.open('', '_blank', 'width=420,height=800');
+
+      if (!printWindow) {
+        toast.error('Não foi possível abrir a janela de impressão.');
+        return;
+      }
+
+      const orderStatus = (order.status as OrderStatus) || 'pending';
+      const printStatus = statusMap[orderStatus] || statusMap.pending;
+
+      const itemLines = (order.items || [])
+        .map((item: any) => {
+          const quantity = Number(item.quantity || 0);
+          const unitPrice = Number(item.price || 0);
+          const totalPrice = unitPrice * quantity;
+
+          const extras =
+            Array.isArray(item.extras) && item.extras.length > 0
+              ? `
+                <div class="extras">
+                  ${item.extras
+                    .map(
+                      (extra: any) => `
+                        <div class="extra-line">
+                          <span>+ ${escapeHtml(extra.name || 'Adicional')}</span>
+                          <span>${formatMoney(Number(extra.price || 0) * quantity)}</span>
+                        </div>
+                      `
+                    )
+                    .join('')}
+                </div>
+              `
+              : '';
+
+          const notes =
+            item.notes || item.observation || item.observacao
+              ? `<div class="item-note">Obs.: ${escapeHtml(
+                  item.notes || item.observation || item.observacao
+                )}</div>`
+              : '';
+
+          return `
+            <div class="item">
+              <div class="item-top">
+                <span>${quantity}x ${escapeHtml(item.name || 'Item')}</span>
+                <span>${formatMoney(totalPrice)}</span>
+              </div>
+              ${extras}
+              ${notes}
+            </div>
+          `;
+        })
+        .join('');
+
+      const orderNote =
+        order.notes || order.observation || order.observacao || order.customerObservation;
+
+      const deliveryType =
+        order.deliveryType ||
+        order.type ||
+        (order.customerAddress ? 'Entrega' : 'Retirada');
+
+      const html = `
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+          <head>
+            <meta charset="UTF-8" />
+            <title>Imprimir pedido ${escapeHtml(order.code || '')}</title>
+            <style>
+              * {
+                box-sizing: border-box;
+              }
+
+              html, body {
+                margin: 0;
+                padding: 0;
+                background: #ffffff;
+                color: #000000;
+                font-family: Arial, Helvetica, sans-serif;
+              }
+
+              body {
+                padding: 16px;
+                width: 80mm;
+                max-width: 80mm;
+                margin: 0 auto;
+              }
+
+              .center {
+                text-align: center;
+              }
+
+              .store-name {
+                font-size: 18px;
+                font-weight: 700;
+                margin-bottom: 4px;
+              }
+
+              .muted {
+                font-size: 12px;
+                color: #333333;
+              }
+
+              .divider {
+                border-top: 1px dashed #000;
+                margin: 12px 0;
+              }
+
+              .section-title {
+                font-size: 12px;
+                font-weight: 700;
+                text-transform: uppercase;
+                margin-bottom: 6px;
+              }
+
+              .line {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 8px;
+                font-size: 13px;
+                margin-bottom: 4px;
+              }
+
+              .line span:last-child {
+                text-align: right;
+                white-space: nowrap;
+              }
+
+              .item {
+                padding: 8px 0;
+                border-bottom: 1px dashed #d4d4d4;
+              }
+
+              .item:last-child {
+                border-bottom: none;
+              }
+
+              .item-top,
+              .extra-line {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 8px;
+                font-size: 13px;
+              }
+
+              .item-top {
+                font-weight: 700;
+              }
+
+              .extras {
+                margin-top: 4px;
+                padding-left: 8px;
+              }
+
+              .extra-line {
+                font-size: 12px;
+                margin-top: 2px;
+              }
+
+              .item-note,
+              .note-box {
+                margin-top: 6px;
+                font-size: 12px;
+                white-space: pre-wrap;
+                word-break: break-word;
+              }
+
+              .total-box {
+                margin-top: 10px;
+              }
+
+              .total {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                font-size: 18px;
+                font-weight: 700;
+                margin-top: 6px;
+              }
+
+              @media print {
+                @page {
+                  size: 80mm auto;
+                  margin: 4mm;
+                }
+
+                body {
+                  width: auto;
+                  max-width: none;
+                  padding: 0;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="center">
+              <div class="store-name">${escapeHtml(resolvedStore?.name || 'Simples Delivery')}</div>
+              <div class="muted">Comprovante interno do pedido</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="line">
+              <span><strong>Pedido:</strong></span>
+              <span><strong>${escapeHtml(order.code || '-')}</strong></span>
+            </div>
+            <div class="line">
+              <span><strong>Data:</strong></span>
+              <span>${escapeHtml(new Date(order.createdAt).toLocaleString('pt-BR'))}</span>
+            </div>
+            <div class="line">
+              <span><strong>Status:</strong></span>
+              <span>${escapeHtml(printStatus.label)}</span>
+            </div>
+            <div class="line">
+              <span><strong>Tipo:</strong></span>
+              <span>${escapeHtml(deliveryType)}</span>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section-title">Cliente</div>
+            <div class="line">
+              <span>Nome:</span>
+              <span>${escapeHtml(order.customerName || 'Cliente')}</span>
+            </div>
+            <div class="line">
+              <span>Telefone:</span>
+              <span>${escapeHtml(order.customerPhone || 'Não informado')}</span>
+            </div>
+            ${
+              order.customerAddress
+                ? `
+                  <div class="line">
+                    <span>Endereço:</span>
+                    <span>${escapeHtml(order.customerAddress)}</span>
+                  </div>
+                `
+                : ''
+            }
+
+            <div class="divider"></div>
+
+            <div class="section-title">Itens</div>
+            ${itemLines || '<div class="muted">Nenhum item encontrado.</div>'}
+
+            ${
+              orderNote
+                ? `
+                  <div class="divider"></div>
+                  <div class="section-title">Observações</div>
+                  <div class="note-box">${escapeHtml(orderNote)}</div>
+                `
+                : ''
+            }
+
+            <div class="divider"></div>
+
+            <div class="section-title">Pagamento e resumo</div>
+            <div class="line">
+              <span>Pagamento:</span>
+              <span>${escapeHtml(order.paymentMethod || 'Não informado')}</span>
+            </div>
+            <div class="line">
+              <span>Subtotal:</span>
+              <span>${formatMoney(Number(order.subtotal || 0))}</span>
+            </div>
+            <div class="line">
+              <span>Desconto:</span>
+              <span>- ${formatMoney(Number(order.discount || 0))}</span>
+            </div>
+            <div class="line">
+              <span>Entrega:</span>
+              <span>${formatMoney(Number(order.deliveryFee || 0))}</span>
+            </div>
+
+            <div class="total-box">
+              <div class="total">
+                <span>Total</span>
+                <span>${formatMoney(Number(order.total || 0))}</span>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="center muted">
+              Impresso em ${escapeHtml(new Date().toLocaleString('pt-BR'))}
+            </div>
+
+            <script>
+              window.onload = function () {
+                setTimeout(function () {
+                  window.print();
+                }, 250);
+              };
+            </script>
+          </body>
+        </html>
+      `;
+
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
+    } catch (error) {
+      console.error('Erro ao imprimir pedido:', error);
+      toast.error('Não foi possível imprimir o pedido.');
+    }
+  };
 
   if (authLoading || !authChecked || !isLoaded) {
     return <div className="p-6 text-white">Carregando pedidos...</div>;
@@ -371,8 +693,8 @@ export function AdminOrders() {
               searchTerm
                 ? 'Tente outro código ou limpe a busca.'
                 : viewMode === 'today'
-                ? 'Ainda não existem pedidos de hoje.'
-                : 'Quando os pedidos entrarem, eles aparecerão aqui para você gerenciar.'
+                  ? 'Ainda não existem pedidos de hoje.'
+                  : 'Quando os pedidos entrarem, eles aparecerão aqui para você gerenciar.'
             }
           />
         ) : (
@@ -437,7 +759,17 @@ export function AdminOrders() {
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handlePrintOrder(order)}
+                        className="h-11 rounded-full border-white/10 bg-[#111111] px-4 text-white hover:bg-[#181818]"
+                      >
+                        <Printer className="mr-2 h-4 w-4" />
+                        Imprimir
+                      </Button>
+
                       <Select
                         value={order.status}
                         onValueChange={(value) =>
