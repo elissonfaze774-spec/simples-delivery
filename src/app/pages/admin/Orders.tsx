@@ -149,7 +149,7 @@ export function AdminOrders() {
 
   const handlePrintOrder = (order: any) => {
     try {
-      const printWindow = window.open('', '_blank', 'width=420,height=900');
+      const printWindow = window.open('', '_blank', 'width=420,height=800');
 
       if (!printWindow) {
         toast.error('Não foi possível abrir a janela de impressão.');
@@ -165,23 +165,16 @@ export function AdminOrders() {
           const unitPrice = Number(item.price || 0);
           const totalPrice = unitPrice * quantity;
 
-          const extrasSource =
-            item.extras ||
-            item.additionalItems ||
-            item.additionals ||
-            item.complements ||
-            [];
-
           const extras =
-            Array.isArray(extrasSource) && extrasSource.length > 0
+            Array.isArray(item.extras) && item.extras.length > 0
               ? `
                 <div class="extras">
-                  ${extrasSource
+                  ${item.extras
                     .map(
                       (extra: any) => `
                         <div class="extra-line">
                           <span>+ ${escapeHtml(extra.name || 'Adicional')}</span>
-                          <span>${formatMoney(Number(extra.price || 0))}</span>
+                          <span>${formatMoney(Number(extra.price || 0) * quantity)}</span>
                         </div>
                       `
                     )
@@ -190,12 +183,12 @@ export function AdminOrders() {
               `
               : '';
 
-          const itemNoteValue =
-            item.notes || item.note || item.observation || item.observacao || '';
-
-          const notes = itemNoteValue
-            ? `<div class="item-note">Obs.: ${escapeHtml(itemNoteValue)}</div>`
-            : '';
+          const notes =
+            item.notes || item.observation || item.observacao
+              ? `<div class="item-note">Obs.: ${escapeHtml(
+                  item.notes || item.observation || item.observacao
+                )}</div>`
+              : '';
 
           return `
             <div class="item">
@@ -211,12 +204,7 @@ export function AdminOrders() {
         .join('');
 
       const orderNote =
-        order.notes ||
-        order.note ||
-        order.observation ||
-        order.observacao ||
-        order.customerObservation ||
-        '';
+        order.notes || order.observation || order.observacao || order.customerObservation;
 
       const deliveryType =
         order.deliveryType ||
@@ -243,12 +231,10 @@ export function AdminOrders() {
               }
 
               body {
+                padding: 16px;
                 width: 80mm;
                 max-width: 80mm;
                 margin: 0 auto;
-                padding: 10px 8px 14px;
-                font-size: 12px;
-                line-height: 1.35;
               }
 
               .center {
@@ -257,76 +243,44 @@ export function AdminOrders() {
 
               .store-name {
                 font-size: 18px;
-                font-weight: 800;
-                line-height: 1.2;
-                margin-bottom: 2px;
+                font-weight: 700;
+                margin-bottom: 4px;
               }
 
-              .subtext {
-                font-size: 11px;
+              .muted {
+                font-size: 12px;
                 color: #333333;
               }
 
               .divider {
-                border-top: 1px dashed #000000;
-                margin: 10px 0;
-              }
-
-              .divider-strong {
-                border-top: 2px dashed #000000;
+                border-top: 1px dashed #000;
                 margin: 12px 0;
               }
 
               .section-title {
-                font-size: 11px;
-                font-weight: 800;
+                font-size: 12px;
+                font-weight: 700;
                 text-transform: uppercase;
-                letter-spacing: 0.04em;
                 margin-bottom: 6px;
               }
 
               .line {
                 display: flex;
-                justify-content: space-between;
                 align-items: flex-start;
+                justify-content: space-between;
                 gap: 8px;
+                font-size: 13px;
                 margin-bottom: 4px;
-                font-size: 12px;
-              }
-
-              .line span:first-child {
-                flex: 1;
               }
 
               .line span:last-child {
                 text-align: right;
-                max-width: 50%;
-                word-break: break-word;
-              }
-
-              .order-highlight {
-                text-align: center;
-                padding: 8px 6px;
-                border: 1px dashed #000000;
-                margin-bottom: 10px;
-              }
-
-              .order-code {
-                font-size: 20px;
-                font-weight: 800;
-                line-height: 1.1;
-              }
-
-              .status-badge {
-                display: inline-block;
-                margin-top: 4px;
-                font-size: 11px;
-                font-weight: 700;
+                white-space: nowrap;
               }
 
               .item {
                 padding: 8px 0;
-                border-bottom: 1px dashed #cfcfcf;
+                border-bottom: 1px dashed #d4d4d4;
               }
 
               .item:last-child {
@@ -336,19 +290,14 @@ export function AdminOrders() {
               .item-top,
               .extra-line {
                 display: flex;
-                justify-content: space-between;
                 align-items: flex-start;
+                justify-content: space-between;
                 gap: 8px;
+                font-size: 13px;
               }
 
               .item-top {
-                font-size: 12px;
                 font-weight: 700;
-              }
-
-              .item-top span:first-child {
-                flex: 1;
-                word-break: break-word;
               }
 
               .extras {
@@ -357,67 +306,40 @@ export function AdminOrders() {
               }
 
               .extra-line {
-                font-size: 11px;
+                font-size: 12px;
                 margin-top: 2px;
-              }
-
-              .extra-line span:first-child {
-                flex: 1;
-                word-break: break-word;
               }
 
               .item-note,
               .note-box {
-                margin-top: 5px;
-                font-size: 11px;
+                margin-top: 6px;
+                font-size: 12px;
                 white-space: pre-wrap;
                 word-break: break-word;
               }
 
-              .note-box {
-                border: 1px dashed #000000;
-                padding: 6px;
-              }
-
-              .summary-box {
-                margin-top: 2px;
-              }
-
               .total-box {
-                margin-top: 8px;
-                padding-top: 8px;
-                border-top: 2px solid #000000;
+                margin-top: 10px;
               }
 
               .total {
                 display: flex;
-                justify-content: space-between;
                 align-items: center;
+                justify-content: space-between;
                 font-size: 18px;
-                font-weight: 800;
-              }
-
-              .footer {
-                margin-top: 12px;
-                text-align: center;
-                font-size: 10px;
-                color: #444444;
-              }
-
-              @page {
-                size: 80mm auto;
-                margin: 4mm;
+                font-weight: 700;
+                margin-top: 6px;
               }
 
               @media print {
-                html, body {
-                  background: #ffffff;
+                @page {
+                  size: 80mm auto;
+                  margin: 4mm;
                 }
 
                 body {
                   width: auto;
                   max-width: none;
-                  margin: 0;
                   padding: 0;
                 }
               }
@@ -426,45 +348,44 @@ export function AdminOrders() {
           <body>
             <div class="center">
               <div class="store-name">${escapeHtml(resolvedStore?.name || 'Simples Delivery')}</div>
-              <div class="subtext">Comprovante interno do pedido</div>
+              <div class="muted">Comprovante interno do pedido</div>
             </div>
 
             <div class="divider"></div>
 
-            <div class="order-highlight">
-              <div class="order-code">${escapeHtml(order.code || '-')}</div>
-              <div class="status-badge">${escapeHtml(printStatus.label)}</div>
-            </div>
-
             <div class="line">
-              <span><strong>Data</strong></span>
+              <span><strong>Pedido:</strong></span>
+              <span><strong>${escapeHtml(order.code || '-')}</strong></span>
+            </div>
+            <div class="line">
+              <span><strong>Data:</strong></span>
               <span>${escapeHtml(new Date(order.createdAt).toLocaleString('pt-BR'))}</span>
             </div>
             <div class="line">
-              <span><strong>Tipo</strong></span>
-              <span>${escapeHtml(deliveryType)}</span>
+              <span><strong>Status:</strong></span>
+              <span>${escapeHtml(printStatus.label)}</span>
             </div>
             <div class="line">
-              <span><strong>Pagamento</strong></span>
-              <span>${escapeHtml(order.paymentMethod || 'Não informado')}</span>
+              <span><strong>Tipo:</strong></span>
+              <span>${escapeHtml(deliveryType)}</span>
             </div>
 
             <div class="divider"></div>
 
             <div class="section-title">Cliente</div>
             <div class="line">
-              <span>Nome</span>
+              <span>Nome:</span>
               <span>${escapeHtml(order.customerName || 'Cliente')}</span>
             </div>
             <div class="line">
-              <span>Telefone</span>
+              <span>Telefone:</span>
               <span>${escapeHtml(order.customerPhone || 'Não informado')}</span>
             </div>
             ${
               order.customerAddress
                 ? `
                   <div class="line">
-                    <span>Endereço</span>
+                    <span>Endereço:</span>
                     <span>${escapeHtml(order.customerAddress)}</span>
                   </div>
                 `
@@ -473,35 +394,37 @@ export function AdminOrders() {
 
             <div class="divider"></div>
 
-            <div class="section-title">Itens do pedido</div>
-            ${itemLines || '<div class="subtext">Nenhum item encontrado.</div>'}
+            <div class="section-title">Itens</div>
+            ${itemLines || '<div class="muted">Nenhum item encontrado.</div>'}
 
             ${
               orderNote
                 ? `
                   <div class="divider"></div>
-                  <div class="section-title">Observações do pedido</div>
+                  <div class="section-title">Observações</div>
                   <div class="note-box">${escapeHtml(orderNote)}</div>
                 `
                 : ''
             }
 
-            <div class="divider-strong"></div>
+            <div class="divider"></div>
 
-            <div class="section-title">Resumo financeiro</div>
-            <div class="summary-box">
-              <div class="line">
-                <span>Subtotal</span>
-                <span>${formatMoney(Number(order.subtotal || 0))}</span>
-              </div>
-              <div class="line">
-                <span>Desconto</span>
-                <span>- ${formatMoney(Number(order.discount || 0))}</span>
-              </div>
-              <div class="line">
-                <span>Entrega</span>
-                <span>${formatMoney(Number(order.deliveryFee || 0))}</span>
-              </div>
+            <div class="section-title">Pagamento e resumo</div>
+            <div class="line">
+              <span>Pagamento:</span>
+              <span>${escapeHtml(order.paymentMethod || 'Não informado')}</span>
+            </div>
+            <div class="line">
+              <span>Subtotal:</span>
+              <span>${formatMoney(Number(order.subtotal || 0))}</span>
+            </div>
+            <div class="line">
+              <span>Desconto:</span>
+              <span>- ${formatMoney(Number(order.discount || 0))}</span>
+            </div>
+            <div class="line">
+              <span>Entrega:</span>
+              <span>${formatMoney(Number(order.deliveryFee || 0))}</span>
             </div>
 
             <div class="total-box">
@@ -511,7 +434,9 @@ export function AdminOrders() {
               </div>
             </div>
 
-            <div class="footer">
+            <div class="divider"></div>
+
+            <div class="center muted">
               Impresso em ${escapeHtml(new Date().toLocaleString('pt-BR'))}
             </div>
 
@@ -520,10 +445,6 @@ export function AdminOrders() {
                 setTimeout(function () {
                   window.print();
                 }, 250);
-              };
-
-              window.onafterprint = function () {
-                window.close();
               };
             </script>
           </body>
