@@ -42,6 +42,8 @@ export type Order = {
   customerReference?: string;
   customerNotes?: string;
   paymentMethod?: string;
+  deliveryMethod?: 'delivery' | 'pickup';
+  deliveryDistanceKm?: number;
   items: OrderItem[];
   subtotal: number;
   discount: number;
@@ -56,11 +58,13 @@ type CreateOrderInput = {
   storeId: string;
   customerName: string;
   customerPhone: string;
-  customerAddress?: string;
+  customerAddress: string;
   customerReference?: string;
   customerNotes?: string;
   paymentMethod?: string;
-  items: Array<OrderItem | CartItem | any>;
+  deliveryMethod?: 'delivery' | 'pickup';
+  deliveryDistanceKm?: number;
+  items: any[];
   subtotal: number;
   discount?: number;
   deliveryFee?: number;
@@ -199,6 +203,13 @@ function mapDbOrder(row: any): Order {
   const rawStatus = safeString(row?.status).toLowerCase();
   const status: OrderStatus = isValidOrderStatus(rawStatus) ? rawStatus : 'pending';
 
+  const rawDeliveryMethod = safeString(
+    row?.delivery_method ?? row?.deliveryMethod
+  ).toLowerCase();
+
+  const deliveryMethod: 'delivery' | 'pickup' =
+    rawDeliveryMethod === 'pickup' ? 'pickup' : 'delivery';
+
   return {
     id: safeString(row?.id),
     code: safeString(row?.code),
@@ -210,6 +221,10 @@ function mapDbOrder(row: any): Order {
       safeString(row?.customer_reference ?? row?.customerReference) || undefined,
     customerNotes: safeString(row?.customer_notes ?? row?.customerNotes) || undefined,
     paymentMethod: safeString(row?.payment_method ?? row?.paymentMethod) || undefined,
+    deliveryMethod,
+    deliveryDistanceKm: safeNumber(
+      row?.delivery_distance_km ?? row?.deliveryDistanceKm
+    ),
     items: normalizeOrderItems(row?.items),
     subtotal: safeNumber(row?.subtotal),
     discount: safeNumber(row?.discount),
@@ -323,6 +338,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         customer_reference: input.customerReference?.trim() ? input.customerReference : null,
         customer_notes: input.customerNotes?.trim() ? input.customerNotes : null,
         payment_method: input.paymentMethod?.trim() ? input.paymentMethod : null,
+        delivery_method: input.deliveryMethod === 'pickup' ? 'pickup' : 'delivery',
+        delivery_distance_km: safeNumber(input.deliveryDistanceKm),
         items: normalizedItems,
         subtotal: safeNumber(input.subtotal),
         discount: safeNumber(input.discount),

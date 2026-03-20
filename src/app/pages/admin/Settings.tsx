@@ -12,6 +12,8 @@ import {
   MapPin,
   Search,
   Info,
+  Bike,
+  Store,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
@@ -33,6 +35,15 @@ function formatMoney(value: number) {
   });
 }
 
+function normalizeDigits(value: string) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function toNumber(value: unknown) {
+  const parsed = Number(String(value ?? '').replace(/\./g, '').replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 const themePresets = [
   '#EA1D2C',
   '#7C3AED',
@@ -51,10 +62,6 @@ const themePresets = [
   '#111827',
   '#000000',
 ];
-
-function normalizeDigits(value: string) {
-  return String(value || '').replace(/\D/g, '');
-}
 
 function fieldClassName(withIcon = false) {
   return `h-12 rounded-2xl border border-white/10 bg-white/[0.03] text-white placeholder:text-white/35 ${
@@ -137,7 +144,36 @@ export function AdminSettings() {
   const currentPlan =
     (resolvedStore as any).plan || (resolvedStore as any).plan_id || 'iniciante';
 
-  const currentDeliveryFee = Number((resolvedStore as any).deliveryFee || 0);
+  const currentDeliveryFee = Number(
+    (resolvedStore as any).deliveryFee ?? (resolvedStore as any).delivery_fee ?? 0
+  );
+
+  const currentDeliveryMode =
+    String(
+      (resolvedStore as any).deliveryMode ||
+        (resolvedStore as any).delivery_mode ||
+        'fixed'
+    ).trim().toLowerCase() === 'distance'
+      ? 'distance'
+      : 'fixed';
+
+  const currentDeliveryFeePerKm = Number(
+    (resolvedStore as any).deliveryFeePerKm ??
+      (resolvedStore as any).delivery_fee_per_km ??
+      0
+  );
+
+  const currentDeliveryRadiusKm = Number(
+    (resolvedStore as any).deliveryRadiusKm ??
+      (resolvedStore as any).delivery_radius_km ??
+      0
+  );
+
+  const currentAllowPickup = Boolean(
+    (resolvedStore as any).allowPickup ??
+      (resolvedStore as any).allow_pickup ??
+      true
+  );
 
   const currentLogoFallback = String((resolvedStore as any).logo || '').trim();
   const currentLogoUrl = String(
@@ -255,17 +291,19 @@ export function AdminSettings() {
 
     const formData = new FormData(e.currentTarget);
 
-    const rawDeliveryFee = String(formData.get('deliveryFee') || '0')
-      .replace(/\s/g, '')
-      .replace(/\./g, '')
-      .replace(',', '.');
-
     const name = String(formData.get('name') || '').trim();
     const logo = String(formData.get('logo') || '').trim();
     const logoUrl = String(formData.get('logoUrl') || '').trim();
     const banner = String(formData.get('banner') || '').trim();
     const whatsapp = normalizeDigits(String(formData.get('whatsapp') || ''));
-    const deliveryFee = Math.max(Number(rawDeliveryFee || 0), 0);
+    const deliveryFee = Math.max(toNumber(formData.get('deliveryFee')), 0);
+    const deliveryMode =
+      String(formData.get('deliveryMode') || 'fixed').trim().toLowerCase() === 'distance'
+        ? 'distance'
+        : 'fixed';
+    const deliveryFeePerKm = Math.max(toNumber(formData.get('deliveryFeePerKm')), 0);
+    const deliveryRadiusKm = Math.max(toNumber(formData.get('deliveryRadiusKm')), 0);
+    const allowPickup = String(formData.get('allowPickup') || 'true') === 'true';
     const openingTime = String(formData.get('openingTime') || '').trim();
     const closingTime = String(formData.get('closingTime') || '').trim();
     const active = String(formData.get('active') || 'true') === 'true';
@@ -291,8 +329,13 @@ export function AdminSettings() {
       return;
     }
 
-    if (!Number.isFinite(deliveryFee)) {
-      toast.error('Informe uma taxa de entrega válida.');
+    if (deliveryMode === 'fixed' && !Number.isFinite(deliveryFee)) {
+      toast.error('Informe uma taxa fixa válida.');
+      return;
+    }
+
+    if (deliveryMode === 'distance' && deliveryFeePerKm <= 0) {
+      toast.error('Informe um valor por km maior que zero.');
       return;
     }
 
@@ -330,6 +373,10 @@ export function AdminSettings() {
       name,
       whatsapp,
       deliveryFee,
+      deliveryMode,
+      deliveryFeePerKm,
+      deliveryRadiusKm,
+      allowPickup,
       active,
       openingTime,
       closingTime,
@@ -347,6 +394,7 @@ export function AdminSettings() {
       storeReference,
       storeLatitude,
       storeLongitude,
+
       store_cep: storeCep,
       store_street: storeStreet,
       store_number: storeNumber,
@@ -357,10 +405,15 @@ export function AdminSettings() {
       store_reference: storeReference,
       store_latitude: storeLatitude,
       store_longitude: storeLongitude,
+
       theme_color: selectedThemeColor,
       logo_url: logoUrl || currentLogoUrl || '',
       banner_url: banner || currentBanner || '',
       is_active: active,
+      delivery_mode: deliveryMode,
+      delivery_fee_per_km: deliveryFeePerKm,
+      delivery_radius_km: deliveryRadiusKm,
+      allow_pickup: allowPickup,
     };
 
     setSaving(true);
@@ -379,7 +432,7 @@ export function AdminSettings() {
   return (
     <AdminShell
       title="Configurações"
-      subtitle="Ajuste sua loja, endereço, horários e aparência"
+      subtitle="Ajuste sua loja, endereço, horários, retirada e entrega"
       storeName={resolvedStore.name}
       onBack={() => navigate('/admin')}
       stats={[
@@ -395,8 +448,14 @@ export function AdminSettings() {
         },
         {
           label: 'Entrega',
-          value: formatMoney(currentDeliveryFee),
-          helper: 'Taxa padrão da loja',
+          value:
+            currentDeliveryMode === 'distance'
+              ? `${formatMoney(currentDeliveryFeePerKm)}/km`
+              : formatMoney(currentDeliveryFee),
+          helper:
+            currentDeliveryMode === 'distance'
+              ? 'Taxa automática por distância'
+              : 'Taxa fixa da loja',
         },
       ]}
     >
@@ -513,27 +572,160 @@ export function AdminSettings() {
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="deliveryFee" className="text-white/85">
-                  Taxa de entrega
-                </Label>
-                <div className="relative mt-2">
-                  <Wallet className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
-                  <Input
-                    id="deliveryFee"
-                    name="deliveryFee"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    defaultValue={currentDeliveryFee}
-                    className={fieldClassName(true)}
-                  />
+              <div className="md:col-span-2 rounded-[24px] border border-[#3a0d12] bg-[#12090b] p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <Bike className="h-4 w-4 text-[#EA1D2C]" />
+                  <p className="text-sm font-semibold text-white">Configuração da entrega</p>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 text-white transition hover:bg-white/[0.07]">
+                    <input
+                      type="radio"
+                      name="deliveryMode"
+                      value="fixed"
+                      defaultChecked={currentDeliveryMode === 'fixed'}
+                      className="mt-1 accent-[#EA1D2C]"
+                    />
+                    <div>
+                      <p className="text-sm font-medium">Taxa fixa</p>
+                      <p className="text-xs text-white/50">
+                        A loja cobra sempre o mesmo valor de entrega.
+                      </p>
+                    </div>
+                  </label>
+
+                  <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 text-white transition hover:bg-white/[0.07]">
+                    <input
+                      type="radio"
+                      name="deliveryMode"
+                      value="distance"
+                      defaultChecked={currentDeliveryMode === 'distance'}
+                      className="mt-1 accent-[#EA1D2C]"
+                    />
+                    <div>
+                      <p className="text-sm font-medium">Taxa por distância</p>
+                      <p className="text-xs text-white/50">
+                        O valor da entrega será calculado conforme a distância.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="deliveryFee" className="text-white/80">
+                      Taxa fixa de entrega
+                    </Label>
+                    <div className="relative mt-2">
+                      <Wallet className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                      <Input
+                        id="deliveryFee"
+                        name="deliveryFee"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        defaultValue={currentDeliveryFee}
+                        className={fieldClassName(true)}
+                      />
+                    </div>
+                    <p className="mt-2 text-xs text-white/45">
+                      Use este campo quando a loja trabalhar com valor fixo.
+                    </p>
+                  </div>
+
+                  <div className="flex items-end rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/70">
+                    Valor atual:
+                    <span className="ml-2 font-semibold text-white">
+                      {currentDeliveryMode === 'distance'
+                        ? `${formatMoney(currentDeliveryFeePerKm)}/km`
+                        : formatMoney(currentDeliveryFee)}
+                    </span>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="deliveryFeePerKm" className="text-white/80">
+                      Valor por km
+                    </Label>
+                    <div className="relative mt-2">
+                      <Wallet className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                      <Input
+                        id="deliveryFeePerKm"
+                        name="deliveryFeePerKm"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        defaultValue={currentDeliveryFeePerKm}
+                        className={fieldClassName(true)}
+                      />
+                    </div>
+                    <p className="mt-2 text-xs text-white/45">
+                      Exemplo: 2,50 por km.
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="deliveryRadiusKm" className="text-white/80">
+                      Raio máximo de entrega (km)
+                    </Label>
+                    <div className="relative mt-2">
+                      <MapPin className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                      <Input
+                        id="deliveryRadiusKm"
+                        name="deliveryRadiusKm"
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        defaultValue={currentDeliveryRadiusKm}
+                        className={fieldClassName(true)}
+                      />
+                    </div>
+                    <p className="mt-2 text-xs text-white/45">
+                      Se deixar 0, não haverá limite de raio.
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-end rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/70">
-                Valor atual da entrega:
-                <span className="ml-2 font-semibold text-white">{formatMoney(currentDeliveryFee)}</span>
+              <div className="md:col-span-2 rounded-[24px] border border-[#3a0d12] bg-[#12090b] p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <Store className="h-4 w-4 text-[#EA1D2C]" />
+                  <p className="text-sm font-semibold text-white">Retirada no local</p>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 text-white transition hover:bg-white/[0.07]">
+                    <input
+                      type="radio"
+                      name="allowPickup"
+                      value="true"
+                      defaultChecked={currentAllowPickup}
+                      className="mt-1 accent-[#EA1D2C]"
+                    />
+                    <div>
+                      <p className="text-sm font-medium">Permitir retirada no local</p>
+                      <p className="text-xs text-white/50">
+                        O cliente poderá escolher retirar o pedido na loja.
+                      </p>
+                    </div>
+                  </label>
+
+                  <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 text-white transition hover:bg-white/[0.07]">
+                    <input
+                      type="radio"
+                      name="allowPickup"
+                      value="false"
+                      defaultChecked={!currentAllowPickup}
+                      className="mt-1 accent-[#EA1D2C]"
+                    />
+                    <div>
+                      <p className="text-sm font-medium">Não permitir retirada</p>
+                      <p className="text-xs text-white/50">
+                        O cliente poderá apenas escolher entrega.
+                      </p>
+                    </div>
+                  </label>
+                </div>
               </div>
 
               <div className="md:col-span-2 rounded-[24px] border border-[#3a0d12] bg-[#12090b] p-4">
@@ -671,8 +863,9 @@ export function AdminSettings() {
                     </div>
 
                     <p className="mb-4 text-xs text-white/55">
-                      Esses campos são opcionais. Só preencha se você souber a localização da loja
-                      no mapa. Se não souber, pode deixar em branco.
+                      Esses campos são importantes quando a loja usar{' '}
+                      <span className="font-semibold text-white">taxa por distância</span>.
+                      Se quiser cálculo automático funcionando bem, preencha latitude e longitude.
                     </p>
 
                     <div className="grid gap-4 md:grid-cols-2">
@@ -687,9 +880,6 @@ export function AdminSettings() {
                           defaultValue={currentStoreLatitude}
                           className={`mt-2 ${fieldClassName()}`}
                         />
-                        <p className="mt-2 text-xs text-white/45">
-                          Exemplo de latitude: <span className="text-white/75">-10.9472</span>
-                        </p>
                       </div>
 
                       <div>
@@ -703,9 +893,6 @@ export function AdminSettings() {
                           defaultValue={currentStoreLongitude}
                           className={`mt-2 ${fieldClassName()}`}
                         />
-                        <p className="mt-2 text-xs text-white/45">
-                          Exemplo de longitude: <span className="text-white/75">-37.0731</span>
-                        </p>
                       </div>
                     </div>
                   </div>
