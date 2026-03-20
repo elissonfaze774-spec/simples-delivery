@@ -10,6 +10,8 @@ import {
   Power,
   Palette,
   MapPin,
+  Search,
+  Info,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
@@ -53,6 +55,15 @@ const themePresets = [
 function normalizeDigits(value: string) {
   return String(value || '').replace(/\D/g, '');
 }
+
+function fieldClassName(withIcon = false) {
+  return `h-12 rounded-2xl border border-white/10 bg-white/[0.03] text-white placeholder:text-white/35 ${
+    withIcon ? 'pl-10' : ''
+  }`;
+}
+
+const sectionCardClass =
+  'rounded-[28px] border border-[#3a0d12] bg-[linear-gradient(180deg,rgba(12,12,14,0.98)_0%,rgba(18,10,12,0.98)_100%)] p-6 shadow-[0_24px_70px_-45px_rgba(0,0,0,0.8)]';
 
 export function AdminSettings() {
   const navigate = useNavigate();
@@ -368,7 +379,7 @@ export function AdminSettings() {
   return (
     <AdminShell
       title="Configurações"
-      subtitle="Ajuste sua loja e compartilhe com facilidade"
+      subtitle="Ajuste sua loja, endereço, horários e aparência"
       storeName={resolvedStore.name}
       onBack={() => navigate('/admin')}
       stats={[
@@ -391,20 +402,20 @@ export function AdminSettings() {
     >
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <div className="space-y-6">
-          <Card className="rounded-[28px] border-0 bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_100%)] p-6 text-white">
+          <Card className={sectionCardClass}>
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-sm uppercase tracking-[0.25em] text-white/60">Link público</p>
-                <h2 className="mt-3 text-2xl font-bold">Compartilhe sua loja</h2>
-                <p className="mt-2 text-sm text-white/75">
+                <p className="text-sm uppercase tracking-[0.25em] text-[#ff7b85]">Link público</p>
+                <h2 className="mt-3 text-2xl font-bold text-white">Compartilhe sua loja</h2>
+                <p className="mt-2 text-sm text-white/65">
                   Use o link ou QR Code para divulgar seu cardápio e receber pedidos.
                 </p>
               </div>
 
-              <Globe className="h-5 w-5 shrink-0 text-white/70" />
+              <Globe className="h-5 w-5 shrink-0 text-[#ff7b85]" />
             </div>
 
-            <div className="mt-5 break-all rounded-3xl bg-white/10 p-4 text-sm text-white/90">
+            <div className="mt-5 break-all rounded-3xl border border-white/10 bg-white/[0.04] p-4 text-sm text-white/85">
               {storeLink}
             </div>
 
@@ -412,7 +423,7 @@ export function AdminSettings() {
               <Button
                 type="button"
                 onClick={handleCopyLink}
-                className="rounded-full bg-white text-slate-950 hover:bg-white/90"
+                className="rounded-full bg-[#EA1D2C] text-white hover:bg-[#d31625]"
               >
                 {copiedLink ? (
                   <Check className="mr-2 h-4 w-4" />
@@ -425,7 +436,7 @@ export function AdminSettings() {
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-full border-white/20 bg-transparent text-white hover:bg-white/10"
+                className="rounded-full border-white/15 bg-transparent text-white hover:bg-white/10"
                 onClick={() => window.open(storeLink, '_blank', 'noopener,noreferrer')}
               >
                 Abrir loja
@@ -433,69 +444,81 @@ export function AdminSettings() {
             </div>
           </Card>
 
-          <Card className="rounded-[28px] border-0 bg-white p-6 text-center shadow-[0_24px_70px_-45px_rgba(15,23,42,0.65)]">
-            <div className="mb-4 flex items-center justify-center gap-2 text-sm text-slate-500">
+          <Card className={sectionCardClass}>
+            <div className="mb-4 flex items-center justify-center gap-2 text-sm text-white/70">
               <QrCodeIcon className="h-4 w-4 text-[#EA1D2C]" />
               QR Code da loja
             </div>
 
-            <div className="inline-flex max-w-full rounded-[28px] bg-slate-50 p-5">
+            <div className="inline-flex max-w-full rounded-[28px] border border-white/10 bg-white/[0.04] p-5">
               <QRCodeSVG value={storeLink} size={220} includeMargin />
             </div>
+
+            <p className="mt-4 text-center text-xs text-white/45">
+              Seus clientes podem escanear este QR Code para acessar a loja.
+            </p>
           </Card>
         </div>
 
-        <Card className="rounded-[28px] border-0 bg-white p-6 shadow-[0_24px_70px_-45px_rgba(15,23,42,0.65)]">
+        <Card className={sectionCardClass}>
           <div className="mb-6">
-            <p className="text-sm text-slate-500">Aparência, contato, entrega e tema</p>
-            <h2 className="text-2xl font-bold text-slate-950">Informações da loja</h2>
+            <p className="text-sm text-white/55">Aparência, contato, entrega e endereço</p>
+            <h2 className="text-2xl font-bold text-white">Informações da loja</h2>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid gap-5 md:grid-cols-2">
               <div className="md:col-span-2">
-                <Label htmlFor="name">Nome da loja</Label>
+                <Label htmlFor="name" className="text-white/85">
+                  Nome da loja
+                </Label>
                 <div className="relative mt-2">
-                  <StoreIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <StoreIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
                   <Input
                     id="name"
                     name="name"
                     defaultValue={resolvedStore.name || ''}
                     required
-                    className="h-12 rounded-2xl pl-10"
+                    className={fieldClassName(true)}
                   />
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="logo">Logo fallback (emoji)</Label>
+                <Label htmlFor="logo" className="text-white/85">
+                  Logo fallback (emoji)
+                </Label>
                 <Input
                   id="logo"
                   name="logo"
                   defaultValue={currentLogoFallback || '🍔'}
-                  className="mt-2 h-12 rounded-2xl"
+                  className={`mt-2 ${fieldClassName()}`}
                 />
               </div>
 
               <div>
-                <Label htmlFor="whatsapp">WhatsApp</Label>
+                <Label htmlFor="whatsapp" className="text-white/85">
+                  WhatsApp
+                </Label>
                 <div className="relative mt-2">
-                  <MessageCircle className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <MessageCircle className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
                   <Input
                     id="whatsapp"
                     name="whatsapp"
                     placeholder="5511999999999"
                     defaultValue={(resolvedStore as any).whatsapp || ''}
                     required
-                    className="h-12 rounded-2xl pl-10"
+                    className={fieldClassName(true)}
                   />
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="deliveryFee">Taxa de entrega</Label>
+                <Label htmlFor="deliveryFee" className="text-white/85">
+                  Taxa de entrega
+                </Label>
                 <div className="relative mt-2">
-                  <Wallet className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Wallet className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
                   <Input
                     id="deliveryFee"
                     name="deliveryFee"
@@ -503,223 +526,277 @@ export function AdminSettings() {
                     min="0"
                     step="0.01"
                     defaultValue={currentDeliveryFee}
-                    className="h-12 rounded-2xl pl-10"
+                    className={fieldClassName(true)}
                   />
                 </div>
               </div>
 
-              <div className="flex items-end rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              <div className="flex items-end rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/70">
                 Valor atual da entrega:
-                <span className="ml-2 font-semibold">{formatMoney(currentDeliveryFee)}</span>
+                <span className="ml-2 font-semibold text-white">{formatMoney(currentDeliveryFee)}</span>
               </div>
 
-              <div className="md:col-span-2 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+              <div className="md:col-span-2 rounded-[24px] border border-[#3a0d12] bg-[#12090b] p-4">
                 <div className="mb-3 flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-[#EA1D2C]" />
-                  <p className="text-sm font-semibold text-slate-900">Endereço da loja</p>
+                  <p className="text-sm font-semibold text-white">Endereço da loja</p>
                 </div>
+
+                <p className="mb-4 text-sm text-white/55">
+                  Preencha o endereço da loja. Para facilitar, informe o CEP e clique em{' '}
+                  <span className="font-semibold text-white">Buscar CEP</span>.
+                </p>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <Label htmlFor="storeCep">CEP</Label>
+                    <Label htmlFor="storeCep" className="text-white/80">
+                      CEP
+                    </Label>
                     <div className="mt-2 flex gap-2">
                       <Input
                         id="storeCep"
                         name="storeCep"
-                        placeholder="00000000"
+                        placeholder="Ex: 49092280"
                         defaultValue={currentStoreCep}
-                        className="h-12 rounded-2xl"
+                        className={fieldClassName()}
                       />
                       <Button
                         type="button"
                         variant="outline"
                         onClick={handleSearchCep}
                         disabled={cepLoading}
-                        className="h-12 rounded-2xl"
+                        className="h-12 rounded-2xl border-white/10 bg-white/[0.05] text-white hover:bg-white/10"
                       >
+                        <Search className="mr-2 h-4 w-4" />
                         {cepLoading ? 'Buscando...' : 'Buscar CEP'}
                       </Button>
                     </div>
                   </div>
 
                   <div>
-                    <Label htmlFor="storeNumber">Número</Label>
+                    <Label htmlFor="storeNumber" className="text-white/80">
+                      Número
+                    </Label>
                     <Input
                       id="storeNumber"
                       name="storeNumber"
-                      placeholder="123"
+                      placeholder="Ex: 24"
                       defaultValue={currentStoreNumber}
-                      className="mt-2 h-12 rounded-2xl"
+                      className={`mt-2 ${fieldClassName()}`}
                     />
                   </div>
 
                   <div className="md:col-span-2">
-                    <Label htmlFor="storeStreet">Rua</Label>
+                    <Label htmlFor="storeStreet" className="text-white/80">
+                      Rua / Avenida
+                    </Label>
                     <Input
                       id="storeStreet"
                       name="storeStreet"
-                      placeholder="Rua da loja"
+                      placeholder="Ex: Rua da loja"
                       defaultValue={currentStoreStreet}
-                      className="mt-2 h-12 rounded-2xl"
+                      className={`mt-2 ${fieldClassName()}`}
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="storeComplement">Complemento</Label>
+                    <Label htmlFor="storeComplement" className="text-white/80">
+                      Complemento
+                    </Label>
                     <Input
                       id="storeComplement"
                       name="storeComplement"
-                      placeholder="Sala, bloco, apto..."
+                      placeholder="Ex: Loja, sala, box..."
                       defaultValue={currentStoreComplement}
-                      className="mt-2 h-12 rounded-2xl"
+                      className={`mt-2 ${fieldClassName()}`}
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="storeNeighborhood">Bairro</Label>
+                    <Label htmlFor="storeNeighborhood" className="text-white/80">
+                      Bairro
+                    </Label>
                     <Input
                       id="storeNeighborhood"
                       name="storeNeighborhood"
-                      placeholder="Bairro"
+                      placeholder="Ex: Centro"
                       defaultValue={currentStoreNeighborhood}
-                      className="mt-2 h-12 rounded-2xl"
+                      className={`mt-2 ${fieldClassName()}`}
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="storeCity">Cidade</Label>
+                    <Label htmlFor="storeCity" className="text-white/80">
+                      Cidade
+                    </Label>
                     <Input
                       id="storeCity"
                       name="storeCity"
-                      placeholder="Cidade"
+                      placeholder="Ex: Aracaju"
                       defaultValue={currentStoreCity}
-                      className="mt-2 h-12 rounded-2xl"
+                      className={`mt-2 ${fieldClassName()}`}
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="storeState">Estado</Label>
+                    <Label htmlFor="storeState" className="text-white/80">
+                      Estado
+                    </Label>
                     <Input
                       id="storeState"
                       name="storeState"
-                      placeholder="UF"
+                      placeholder="Ex: SE"
                       defaultValue={currentStoreState}
-                      className="mt-2 h-12 rounded-2xl"
+                      className={`mt-2 ${fieldClassName()}`}
                     />
                   </div>
 
                   <div className="md:col-span-2">
-                    <Label htmlFor="storeReference">Ponto de referência</Label>
+                    <Label htmlFor="storeReference" className="text-white/80">
+                      Ponto de referência
+                    </Label>
                     <Input
                       id="storeReference"
                       name="storeReference"
-                      placeholder="Próximo a..."
+                      placeholder="Ex: Próximo à praça, ao lado da farmácia..."
                       defaultValue={currentStoreReference}
-                      className="mt-2 h-12 rounded-2xl"
+                      className={`mt-2 ${fieldClassName()}`}
                     />
                   </div>
 
-                  <div>
-                    <Label htmlFor="storeLatitude">Latitude</Label>
-                    <Input
-                      id="storeLatitude"
-                      name="storeLatitude"
-                      placeholder="-9.000000"
-                      defaultValue={currentStoreLatitude}
-                      className="mt-2 h-12 rounded-2xl"
-                    />
-                  </div>
+                  <div className="md:col-span-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <div className="mb-2 flex items-center gap-2 text-white">
+                      <Info className="h-4 w-4 text-[#EA1D2C]" />
+                      <p className="text-sm font-semibold">Localização no mapa</p>
+                    </div>
 
-                  <div>
-                    <Label htmlFor="storeLongitude">Longitude</Label>
-                    <Input
-                      id="storeLongitude"
-                      name="storeLongitude"
-                      placeholder="-36.000000"
-                      defaultValue={currentStoreLongitude}
-                      className="mt-2 h-12 rounded-2xl"
-                    />
+                    <p className="mb-4 text-xs text-white/55">
+                      Esses campos são opcionais. Só preencha se você souber a localização da loja
+                      no mapa. Se não souber, pode deixar em branco.
+                    </p>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <Label htmlFor="storeLatitude" className="text-white/80">
+                          Latitude da loja
+                        </Label>
+                        <Input
+                          id="storeLatitude"
+                          name="storeLatitude"
+                          placeholder="Ex: -10.9472"
+                          defaultValue={currentStoreLatitude}
+                          className={`mt-2 ${fieldClassName()}`}
+                        />
+                        <p className="mt-2 text-xs text-white/45">
+                          Exemplo de latitude: <span className="text-white/75">-10.9472</span>
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="storeLongitude" className="text-white/80">
+                          Longitude da loja
+                        </Label>
+                        <Input
+                          id="storeLongitude"
+                          name="storeLongitude"
+                          placeholder="Ex: -37.0731"
+                          defaultValue={currentStoreLongitude}
+                          className={`mt-2 ${fieldClassName()}`}
+                        />
+                        <p className="mt-2 text-xs text-white/45">
+                          Exemplo de longitude: <span className="text-white/75">-37.0731</span>
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="md:col-span-2 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+              <div className="md:col-span-2 rounded-[24px] border border-[#3a0d12] bg-[#12090b] p-4">
                 <div className="mb-3 flex items-center gap-2">
                   <Power className="h-4 w-4 text-[#EA1D2C]" />
-                  <p className="text-sm font-semibold text-slate-900">Status da loja</p>
+                  <p className="text-sm font-semibold text-white">Status da loja</p>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
-                  <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                  <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white transition hover:bg-white/[0.07]">
                     <input
                       type="radio"
                       name="active"
                       value="true"
                       defaultChecked={isStoreActive}
+                      className="accent-[#EA1D2C]"
                     />
-                    <span className="text-sm font-medium text-slate-800">Loja aberta</span>
+                    <span className="text-sm font-medium">Loja aberta</span>
                   </label>
 
-                  <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                  <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white transition hover:bg-white/[0.07]">
                     <input
                       type="radio"
                       name="active"
                       value="false"
                       defaultChecked={!isStoreActive}
+                      className="accent-[#EA1D2C]"
                     />
-                    <span className="text-sm font-medium text-slate-800">Loja fechada</span>
+                    <span className="text-sm font-medium">Loja fechada</span>
                   </label>
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="openingTime">Abre às</Label>
+                <Label htmlFor="openingTime" className="text-white/85">
+                  Abre às
+                </Label>
                 <div className="relative mt-2">
-                  <Clock3 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Clock3 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
                   <Input
                     id="openingTime"
                     name="openingTime"
                     type="time"
                     defaultValue={currentOpeningTime}
-                    className="h-12 rounded-2xl pl-10"
+                    className={fieldClassName(true)}
                   />
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="closingTime">Fecha às</Label>
+                <Label htmlFor="closingTime" className="text-white/85">
+                  Fecha às
+                </Label>
                 <div className="relative mt-2">
-                  <Clock3 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Clock3 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
                   <Input
                     id="closingTime"
                     name="closingTime"
                     type="time"
                     defaultValue={currentClosingTime}
-                    className="h-12 rounded-2xl pl-10"
+                    className={fieldClassName(true)}
                   />
                 </div>
               </div>
 
-              <div className="md:col-span-2 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+              <div className="md:col-span-2 rounded-[24px] border border-[#3a0d12] bg-[#12090b] p-4">
                 <div className="mb-3 flex items-center gap-2">
                   <Palette className="h-4 w-4 text-[#EA1D2C]" />
-                  <p className="text-sm font-semibold text-slate-900">Cor do tema da loja</p>
+                  <p className="text-sm font-semibold text-white">Cor do tema da loja</p>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-[140px_1fr]">
                   <div>
-                    <Label htmlFor="themeColorPicker">Escolher cor</Label>
+                    <Label htmlFor="themeColorPicker" className="text-white/80">
+                      Escolher cor
+                    </Label>
                     <Input
                       id="themeColorPicker"
                       type="color"
                       value={selectedThemeColor}
                       onChange={(e) => setSelectedThemeColor(e.target.value)}
-                      className="mt-2 h-12 w-full cursor-pointer rounded-2xl p-2"
+                      className="mt-2 h-12 w-full cursor-pointer rounded-2xl border border-white/10 bg-white/[0.03] p-2"
                     />
                   </div>
 
                   <div>
-                    <p className="mb-2 text-sm text-slate-500">Cores rápidas</p>
+                    <p className="mb-2 text-sm text-white/55">Cores rápidas</p>
                     <div className="flex flex-wrap gap-2">
                       {themePresets.map((color) => (
                         <button
@@ -727,10 +804,10 @@ export function AdminSettings() {
                           type="button"
                           title={color}
                           onClick={() => setSelectedThemeColor(color)}
-                          className={`h-10 w-10 rounded-full border-2 shadow ring-1 ring-slate-200 transition ${
+                          className={`h-10 w-10 rounded-full border-2 shadow transition ${
                             selectedThemeColor.toLowerCase() === color.toLowerCase()
-                              ? 'scale-110 border-slate-900 ring-2 ring-slate-900'
-                              : 'border-white'
+                              ? 'scale-110 border-white ring-2 ring-white/50'
+                              : 'border-white/20'
                           }`}
                           style={{ backgroundColor: color }}
                         />
@@ -741,32 +818,36 @@ export function AdminSettings() {
 
                 <input type="hidden" name="themeColor" value={selectedThemeColor} />
 
-                <p className="mt-3 text-xs text-slate-500">
+                <p className="mt-3 text-xs text-white/45">
                   Essa cor será usada na vitrine da loja para botões, topo e destaques.
                 </p>
               </div>
 
               <div className="md:col-span-2">
-                <Label htmlFor="logoUrl">URL da logo</Label>
+                <Label htmlFor="logoUrl" className="text-white/85">
+                  URL da logo
+                </Label>
                 <Input
                   id="logoUrl"
                   name="logoUrl"
                   type="url"
                   placeholder="https://exemplo.com/logo.png"
                   defaultValue={currentLogoUrl}
-                  className="mt-2 h-12 rounded-2xl"
+                  className={`mt-2 ${fieldClassName()}`}
                 />
               </div>
 
               <div className="md:col-span-2">
-                <Label htmlFor="banner">URL do banner</Label>
+                <Label htmlFor="banner" className="text-white/85">
+                  URL do banner
+                </Label>
                 <Input
                   id="banner"
                   name="banner"
                   type="url"
                   placeholder="https://exemplo.com/banner.png"
                   defaultValue={currentBanner}
-                  className="mt-2 h-12 rounded-2xl"
+                  className={`mt-2 ${fieldClassName()}`}
                 />
               </div>
             </div>
@@ -774,7 +855,7 @@ export function AdminSettings() {
             <Button
               type="submit"
               disabled={saving}
-              className="h-12 w-full rounded-2xl bg-[#EA1D2C] hover:bg-[#d31625]"
+              className="h-12 w-full rounded-2xl bg-[#EA1D2C] text-white hover:bg-[#d31625]"
             >
               {saving ? 'Salvando...' : 'Salvar alterações'}
             </Button>
