@@ -9,6 +9,7 @@ import {
   Clock3,
   Power,
   Palette,
+  MapPin,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
@@ -49,6 +50,10 @@ const themePresets = [
   '#000000',
 ];
 
+function normalizeDigits(value: string) {
+  return String(value || '').replace(/\D/g, '');
+}
+
 export function AdminSettings() {
   const navigate = useNavigate();
   const { user, authLoading } = useAuth();
@@ -57,6 +62,8 @@ export function AdminSettings() {
   const [copiedLink, setCopiedLink] = useState(false);
   const [saving, setSaving] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [selectedThemeColor, setSelectedThemeColor] = useState('#EA1D2C');
+  const [cepLoading, setCepLoading] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -83,6 +90,17 @@ export function AdminSettings() {
 
     return undefined;
   }, [user, isLoaded, stores, getStore, getStoreByAdminEmail]);
+
+  const currentThemeColor =
+    String(
+      (resolvedStore as any)?.themeColor ||
+        (resolvedStore as any)?.theme_color ||
+        '#EA1D2C'
+    ).trim() || '#EA1D2C';
+
+  useEffect(() => {
+    setSelectedThemeColor(currentThemeColor);
+  }, [currentThemeColor]);
 
   if (authLoading || !authChecked || (!isLoaded && stores.length === 0)) {
     return <div className="p-6 text-white">Carregando configurações...</div>;
@@ -120,11 +138,37 @@ export function AdminSettings() {
 
   const currentOpeningTime = String((resolvedStore as any).openingTime || '').trim();
   const currentClosingTime = String((resolvedStore as any).closingTime || '').trim();
-  const currentThemeColor = String(
-    (resolvedStore as any).themeColor ||
-      (resolvedStore as any).theme_color ||
-      '#EA1D2C'
-  ).trim() || '#EA1D2C';
+
+  const currentStoreCep = String(
+    (resolvedStore as any).storeCep || (resolvedStore as any).store_cep || ''
+  ).trim();
+  const currentStoreStreet = String(
+    (resolvedStore as any).storeStreet || (resolvedStore as any).store_street || ''
+  ).trim();
+  const currentStoreNumber = String(
+    (resolvedStore as any).storeNumber || (resolvedStore as any).store_number || ''
+  ).trim();
+  const currentStoreComplement = String(
+    (resolvedStore as any).storeComplement || (resolvedStore as any).store_complement || ''
+  ).trim();
+  const currentStoreNeighborhood = String(
+    (resolvedStore as any).storeNeighborhood || (resolvedStore as any).store_neighborhood || ''
+  ).trim();
+  const currentStoreCity = String(
+    (resolvedStore as any).storeCity || (resolvedStore as any).store_city || ''
+  ).trim();
+  const currentStoreState = String(
+    (resolvedStore as any).storeState || (resolvedStore as any).store_state || ''
+  ).trim();
+  const currentStoreReference = String(
+    (resolvedStore as any).storeReference || (resolvedStore as any).store_reference || ''
+  ).trim();
+  const currentStoreLatitude = String(
+    (resolvedStore as any).storeLatitude || (resolvedStore as any).store_latitude || ''
+  ).trim();
+  const currentStoreLongitude = String(
+    (resolvedStore as any).storeLongitude || (resolvedStore as any).store_longitude || ''
+  ).trim();
 
   const handleCopyLink = async () => {
     try {
@@ -135,6 +179,57 @@ export function AdminSettings() {
     } catch (error) {
       console.error('Erro ao copiar link:', error);
       toast.error('Não foi possível copiar o link.');
+    }
+  };
+
+  const handleSearchCep = async () => {
+    const cepInput = document.getElementById('storeCep') as HTMLInputElement | null;
+    const streetInput = document.getElementById('storeStreet') as HTMLInputElement | null;
+    const neighborhoodInput = document.getElementById('storeNeighborhood') as HTMLInputElement | null;
+    const cityInput = document.getElementById('storeCity') as HTMLInputElement | null;
+    const stateInput = document.getElementById('storeState') as HTMLInputElement | null;
+
+    const cep = normalizeDigits(cepInput?.value || '');
+
+    if (!cep) return;
+
+    if (cep.length !== 8) {
+      toast.error('Informe um CEP válido com 8 números.');
+      return;
+    }
+
+    try {
+      setCepLoading(true);
+
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await response.json();
+
+      if (!response.ok || data?.erro) {
+        throw new Error('CEP não encontrado.');
+      }
+
+      if (streetInput && !streetInput.value.trim()) {
+        streetInput.value = data.logradouro || '';
+      }
+
+      if (neighborhoodInput && !neighborhoodInput.value.trim()) {
+        neighborhoodInput.value = data.bairro || '';
+      }
+
+      if (cityInput && !cityInput.value.trim()) {
+        cityInput.value = data.localidade || '';
+      }
+
+      if (stateInput && !stateInput.value.trim()) {
+        stateInput.value = data.uf || '';
+      }
+
+      toast.success('Endereço preenchido pelo CEP.');
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+      toast.error('Não foi possível buscar o CEP.');
+    } finally {
+      setCepLoading(false);
     }
   };
 
@@ -158,12 +253,22 @@ export function AdminSettings() {
     const logo = String(formData.get('logo') || '').trim();
     const logoUrl = String(formData.get('logoUrl') || '').trim();
     const banner = String(formData.get('banner') || '').trim();
-    const whatsapp = String(formData.get('whatsapp') || '').replace(/\D/g, '');
+    const whatsapp = normalizeDigits(String(formData.get('whatsapp') || ''));
     const deliveryFee = Math.max(Number(rawDeliveryFee || 0), 0);
     const openingTime = String(formData.get('openingTime') || '').trim();
     const closingTime = String(formData.get('closingTime') || '').trim();
     const active = String(formData.get('active') || 'true') === 'true';
-    const themeColor = String(formData.get('themeColor') || '#EA1D2C').trim() || '#EA1D2C';
+
+    const storeCep = normalizeDigits(String(formData.get('storeCep') || ''));
+    const storeStreet = String(formData.get('storeStreet') || '').trim();
+    const storeNumber = String(formData.get('storeNumber') || '').trim();
+    const storeComplement = String(formData.get('storeComplement') || '').trim();
+    const storeNeighborhood = String(formData.get('storeNeighborhood') || '').trim();
+    const storeCity = String(formData.get('storeCity') || '').trim();
+    const storeState = String(formData.get('storeState') || '').trim();
+    const storeReference = String(formData.get('storeReference') || '').trim();
+    const storeLatitude = String(formData.get('storeLatitude') || '').trim();
+    const storeLongitude = String(formData.get('storeLongitude') || '').trim();
 
     if (!name) {
       toast.error('Informe o nome da loja.');
@@ -180,6 +285,36 @@ export function AdminSettings() {
       return;
     }
 
+    if (!storeCep) {
+      toast.error('Informe o CEP da loja.');
+      return;
+    }
+
+    if (!storeStreet) {
+      toast.error('Informe a rua da loja.');
+      return;
+    }
+
+    if (!storeNumber) {
+      toast.error('Informe o número da loja.');
+      return;
+    }
+
+    if (!storeNeighborhood) {
+      toast.error('Informe o bairro da loja.');
+      return;
+    }
+
+    if (!storeCity) {
+      toast.error('Informe a cidade da loja.');
+      return;
+    }
+
+    if (!storeState) {
+      toast.error('Informe o estado da loja.');
+      return;
+    }
+
     const payload: any = {
       name,
       whatsapp,
@@ -187,10 +322,34 @@ export function AdminSettings() {
       active,
       openingTime,
       closingTime,
-      themeColor,
+      themeColor: selectedThemeColor,
       logo: logo || currentLogoFallback || '🍔',
       logoUrl: logoUrl || currentLogoUrl || '',
       banner: banner || currentBanner || '',
+      storeCep,
+      storeStreet,
+      storeNumber,
+      storeComplement,
+      storeNeighborhood,
+      storeCity,
+      storeState,
+      storeReference,
+      storeLatitude,
+      storeLongitude,
+      store_cep: storeCep,
+      store_street: storeStreet,
+      store_number: storeNumber,
+      store_complement: storeComplement,
+      store_neighborhood: storeNeighborhood,
+      store_city: storeCity,
+      store_state: storeState,
+      store_reference: storeReference,
+      store_latitude: storeLatitude,
+      store_longitude: storeLongitude,
+      theme_color: selectedThemeColor,
+      logo_url: logoUrl || currentLogoUrl || '',
+      banner_url: banner || currentBanner || '',
+      is_active: active,
     };
 
     setSaving(true);
@@ -356,6 +515,136 @@ export function AdminSettings() {
 
               <div className="md:col-span-2 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
                 <div className="mb-3 flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-[#EA1D2C]" />
+                  <p className="text-sm font-semibold text-slate-900">Endereço da loja</p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="storeCep">CEP</Label>
+                    <div className="mt-2 flex gap-2">
+                      <Input
+                        id="storeCep"
+                        name="storeCep"
+                        placeholder="00000000"
+                        defaultValue={currentStoreCep}
+                        className="h-12 rounded-2xl"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleSearchCep}
+                        disabled={cepLoading}
+                        className="h-12 rounded-2xl"
+                      >
+                        {cepLoading ? 'Buscando...' : 'Buscar CEP'}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="storeNumber">Número</Label>
+                    <Input
+                      id="storeNumber"
+                      name="storeNumber"
+                      placeholder="123"
+                      defaultValue={currentStoreNumber}
+                      className="mt-2 h-12 rounded-2xl"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label htmlFor="storeStreet">Rua</Label>
+                    <Input
+                      id="storeStreet"
+                      name="storeStreet"
+                      placeholder="Rua da loja"
+                      defaultValue={currentStoreStreet}
+                      className="mt-2 h-12 rounded-2xl"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="storeComplement">Complemento</Label>
+                    <Input
+                      id="storeComplement"
+                      name="storeComplement"
+                      placeholder="Sala, bloco, apto..."
+                      defaultValue={currentStoreComplement}
+                      className="mt-2 h-12 rounded-2xl"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="storeNeighborhood">Bairro</Label>
+                    <Input
+                      id="storeNeighborhood"
+                      name="storeNeighborhood"
+                      placeholder="Bairro"
+                      defaultValue={currentStoreNeighborhood}
+                      className="mt-2 h-12 rounded-2xl"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="storeCity">Cidade</Label>
+                    <Input
+                      id="storeCity"
+                      name="storeCity"
+                      placeholder="Cidade"
+                      defaultValue={currentStoreCity}
+                      className="mt-2 h-12 rounded-2xl"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="storeState">Estado</Label>
+                    <Input
+                      id="storeState"
+                      name="storeState"
+                      placeholder="UF"
+                      defaultValue={currentStoreState}
+                      className="mt-2 h-12 rounded-2xl"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label htmlFor="storeReference">Ponto de referência</Label>
+                    <Input
+                      id="storeReference"
+                      name="storeReference"
+                      placeholder="Próximo a..."
+                      defaultValue={currentStoreReference}
+                      className="mt-2 h-12 rounded-2xl"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="storeLatitude">Latitude</Label>
+                    <Input
+                      id="storeLatitude"
+                      name="storeLatitude"
+                      placeholder="-9.000000"
+                      defaultValue={currentStoreLatitude}
+                      className="mt-2 h-12 rounded-2xl"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="storeLongitude">Longitude</Label>
+                    <Input
+                      id="storeLongitude"
+                      name="storeLongitude"
+                      placeholder="-36.000000"
+                      defaultValue={currentStoreLongitude}
+                      className="mt-2 h-12 rounded-2xl"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                <div className="mb-3 flex items-center gap-2">
                   <Power className="h-4 w-4 text-[#EA1D2C]" />
                   <p className="text-sm font-semibold text-slate-900">Status da loja</p>
                 </div>
@@ -419,12 +708,12 @@ export function AdminSettings() {
 
                 <div className="grid gap-4 md:grid-cols-[140px_1fr]">
                   <div>
-                    <Label htmlFor="themeColor">Escolher cor</Label>
+                    <Label htmlFor="themeColorPicker">Escolher cor</Label>
                     <Input
-                      id="themeColor"
-                      name="themeColor"
+                      id="themeColorPicker"
                       type="color"
-                      defaultValue={currentThemeColor}
+                      value={selectedThemeColor}
+                      onChange={(e) => setSelectedThemeColor(e.target.value)}
                       className="mt-2 h-12 w-full cursor-pointer rounded-2xl p-2"
                     />
                   </div>
@@ -433,27 +722,24 @@ export function AdminSettings() {
                     <p className="mb-2 text-sm text-slate-500">Cores rápidas</p>
                     <div className="flex flex-wrap gap-2">
                       {themePresets.map((color) => (
-                        <label
+                        <button
                           key={color}
-                          className="relative cursor-pointer"
+                          type="button"
                           title={color}
-                        >
-                          <input
-                            type="radio"
-                            name="themeColor"
-                            value={color}
-                            defaultChecked={currentThemeColor.toLowerCase() === color.toLowerCase()}
-                            className="peer sr-only"
-                          />
-                          <span
-                            className="block h-10 w-10 rounded-full border-2 border-white shadow ring-1 ring-slate-200 peer-checked:scale-110 peer-checked:ring-2 peer-checked:ring-slate-900"
-                            style={{ backgroundColor: color }}
-                          />
-                        </label>
+                          onClick={() => setSelectedThemeColor(color)}
+                          className={`h-10 w-10 rounded-full border-2 shadow ring-1 ring-slate-200 transition ${
+                            selectedThemeColor.toLowerCase() === color.toLowerCase()
+                              ? 'scale-110 border-slate-900 ring-2 ring-slate-900'
+                              : 'border-white'
+                          }`}
+                          style={{ backgroundColor: color }}
+                        />
                       ))}
                     </div>
                   </div>
                 </div>
+
+                <input type="hidden" name="themeColor" value={selectedThemeColor} />
 
                 <p className="mt-3 text-xs text-slate-500">
                   Essa cor será usada na vitrine da loja para botões, topo e destaques.

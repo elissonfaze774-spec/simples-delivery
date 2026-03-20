@@ -168,8 +168,8 @@ function normalizeStore(store: any): Store {
       typeof store?.active === 'boolean'
         ? store.active
         : typeof store?.is_active === 'boolean'
-        ? store.is_active
-        : true,
+          ? store.is_active
+          : true,
     adminEmail: normalizeEmail(store?.adminEmail ?? store?.admin_email),
     logoUrl: String(store?.logo_url ?? store?.logoUrl ?? ''),
     storeUrl: String(store?.store_url ?? store?.storeUrl ?? buildStoreUrl(slug)),
@@ -178,13 +178,24 @@ function normalizeStore(store: any): Store {
       typeof store?.suspended === 'boolean'
         ? store.suspended
         : typeof store?.isSuspended === 'boolean'
-        ? store.isSuspended
-        : false,
+          ? store.isSuspended
+          : false,
     deliveryFee: Number(store?.deliveryFee ?? store?.delivery_fee ?? 0),
     openingTime: String(store?.opening_time ?? store?.openingTime ?? ''),
     closingTime: String(store?.closing_time ?? store?.closingTime ?? ''),
     themeColor: normalizeThemeColor(store?.theme_color ?? store?.themeColor),
-  };
+
+    storeCep: String(store?.storeCep ?? store?.store_cep ?? ''),
+    storeStreet: String(store?.storeStreet ?? store?.store_street ?? ''),
+    storeNumber: String(store?.storeNumber ?? store?.store_number ?? ''),
+    storeComplement: String(store?.storeComplement ?? store?.store_complement ?? ''),
+    storeNeighborhood: String(store?.storeNeighborhood ?? store?.store_neighborhood ?? ''),
+    storeCity: String(store?.storeCity ?? store?.store_city ?? ''),
+    storeState: String(store?.storeState ?? store?.store_state ?? ''),
+    storeReference: String(store?.storeReference ?? store?.store_reference ?? ''),
+    storeLatitude: String(store?.storeLatitude ?? store?.store_latitude ?? ''),
+    storeLongitude: String(store?.storeLongitude ?? store?.store_longitude ?? ''),
+  } as Store;
 }
 
 function normalizeProduct(product: any): Product {
@@ -204,8 +215,8 @@ function normalizeProduct(product: any): Product {
       typeof product?.available === 'boolean'
         ? product.available
         : typeof product?.is_available === 'boolean'
-        ? product.is_available
-        : true,
+          ? product.is_available
+          : true,
   };
 }
 
@@ -227,8 +238,8 @@ function normalizeCoupon(coupon: any): Coupon {
       typeof coupon?.active === 'boolean'
         ? coupon.active
         : typeof coupon?.is_active === 'boolean'
-        ? coupon.is_active
-        : true,
+          ? coupon.is_active
+          : true,
     storeId: String(coupon?.storeId ?? coupon?.store_id ?? ''),
   };
 }
@@ -396,9 +407,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const payload: any = {};
 
       if (data.name !== undefined) payload.name = data.name;
-      if (data.slug !== undefined) payload.slug = slugify(data.slug);
+      if (data.slug !== undefined) payload.slug = slugify(String(data.slug || ''));
       if (data.logo !== undefined) payload.logo = data.logo;
-      if (data.banner !== undefined) payload.banner = data.banner;
+      if (data.banner !== undefined) {
+        payload.banner = data.banner;
+        payload.banner_url = data.banner;
+      }
       if (data.whatsapp !== undefined) payload.whatsapp = data.whatsapp;
       if ((data as any).themeColor !== undefined) {
         payload.theme_color = normalizeThemeColor((data as any).themeColor);
@@ -414,12 +428,46 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (data.storeUrl !== undefined) payload.store_url = data.storeUrl;
       if (data.plan !== undefined) payload.plan = data.plan;
       if ((data as any).suspended !== undefined) payload.suspended = (data as any).suspended;
-      if (data.deliveryFee !== undefined) payload.delivery_fee = Number(data.deliveryFee || 0);
+      if (data.deliveryFee !== undefined) {
+        payload.delivery_fee = Number(data.deliveryFee || 0);
+        payload.deliveryFee = Number(data.deliveryFee || 0);
+      }
       if ((data as any).openingTime !== undefined) {
         payload.opening_time = String((data as any).openingTime || '');
       }
       if ((data as any).closingTime !== undefined) {
         payload.closing_time = String((data as any).closingTime || '');
+      }
+
+      if ((data as any).storeCep !== undefined) {
+        payload.store_cep = String((data as any).storeCep || '');
+      }
+      if ((data as any).storeStreet !== undefined) {
+        payload.store_street = String((data as any).storeStreet || '');
+      }
+      if ((data as any).storeNumber !== undefined) {
+        payload.store_number = String((data as any).storeNumber || '');
+      }
+      if ((data as any).storeComplement !== undefined) {
+        payload.store_complement = String((data as any).storeComplement || '');
+      }
+      if ((data as any).storeNeighborhood !== undefined) {
+        payload.store_neighborhood = String((data as any).storeNeighborhood || '');
+      }
+      if ((data as any).storeCity !== undefined) {
+        payload.store_city = String((data as any).storeCity || '');
+      }
+      if ((data as any).storeState !== undefined) {
+        payload.store_state = String((data as any).storeState || '');
+      }
+      if ((data as any).storeReference !== undefined) {
+        payload.store_reference = String((data as any).storeReference || '');
+      }
+      if ((data as any).storeLatitude !== undefined) {
+        payload.store_latitude = String((data as any).storeLatitude || '');
+      }
+      if ((data as any).storeLongitude !== undefined) {
+        payload.store_longitude = String((data as any).storeLongitude || '');
       }
 
       const { error } = await supabase.from('stores').update(payload).eq('id', id);
@@ -604,6 +652,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         suspended: false,
         logo: '',
         banner: '',
+        banner_url: '',
         whatsapp: '',
         delivery_fee: 0,
         plan: 'iniciante',
@@ -611,6 +660,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         opening_time: '',
         closing_time: '',
         theme_color: '#EA1D2C',
+        store_cep: '',
+        store_street: '',
+        store_number: '',
+        store_complement: '',
+        store_neighborhood: '',
+        store_city: '',
+        store_state: '',
+        store_reference: '',
+        store_latitude: '',
+        store_longitude: '',
       };
 
       const { data, error } = await supabase.from('stores').insert(payload).select().single();

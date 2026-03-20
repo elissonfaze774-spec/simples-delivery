@@ -3,6 +3,24 @@ export type ProductExtra = {
   price: number;
 };
 
+export type Coordinates = {
+  lat: number;
+  lng: number;
+};
+
+export interface Address {
+  zipCode?: string;
+  street: string;
+  number: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  complement?: string;
+  reference?: string;
+  formattedAddress?: string;
+  coordinates?: Coordinates;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -73,6 +91,14 @@ export interface Order {
   isFavorite?: boolean;
   couponCode?: string;
   discount?: number;
+
+  customerName?: string;
+  customerPhone?: string;
+
+  deliveryAddress?: Address;
+  deliveryCoordinates?: Coordinates;
+  deliveryDistanceKm?: number;
+  deliveryFee?: number;
 }
 
 export interface Store {
@@ -92,6 +118,12 @@ export interface Store {
   openingTime?: string;
   closingTime?: string;
   themeColor?: string;
+
+  address?: Address;
+  coordinates?: Coordinates;
+  deliveryRadiusKm?: number;
+  deliveryFeePerKm?: number;
+  minimumOrderValue?: number;
 }
 
 export interface Plan {

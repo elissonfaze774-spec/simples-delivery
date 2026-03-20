@@ -9,6 +9,7 @@ import {
   User,
   Crown,
   Sparkles,
+  Search,
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
@@ -108,6 +109,31 @@ function getProfessionalCustomerLimitMessage() {
   return 'No momento, não foi possível concluir seu pedido. Tente novamente em alguns instantes ou entre em contato com a loja para mais informações.';
 }
 
+function buildFullAddress(params: {
+  street: string;
+  number: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  complement?: string;
+  cep?: string;
+}) {
+  const parts: string[] = [];
+
+  const streetLine = [params.street, params.number].filter(Boolean).join(', ');
+  if (streetLine) parts.push(streetLine);
+
+  if (params.neighborhood) parts.push(params.neighborhood);
+
+  const cityState = [params.city, params.state].filter(Boolean).join(' - ');
+  if (cityState) parts.push(cityState);
+
+  if (params.complement) parts.push(`Complemento: ${params.complement}`);
+  if (params.cep) parts.push(`CEP: ${params.cep}`);
+
+  return parts.join(', ');
+}
+
 const SALES_WHATSAPP = '5582987227433';
 
 function openUpgradeWhatsApp(params: {
@@ -155,11 +181,18 @@ export function Cart() {
     null
   );
   const [submitting, setSubmitting] = useState(false);
+  const [cepLoading, setCepLoading] = useState(false);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [customerAddress, setCustomerAddress] = useState('');
+  const [customerCep, setCustomerCep] = useState('');
+  const [customerStreet, setCustomerStreet] = useState('');
+  const [customerNumber, setCustomerNumber] = useState('');
+  const [customerNeighborhood, setCustomerNeighborhood] = useState('');
+  const [customerCity, setCustomerCity] = useState('');
+  const [customerState, setCustomerState] = useState('');
+  const [customerComplement, setCustomerComplement] = useState('');
   const [customerReference, setCustomerReference] = useState('');
   const [customerNotes, setCustomerNotes] = useState('');
 
@@ -176,7 +209,13 @@ export function Cart() {
       setFirstName(localStorage.getItem('checkout:firstName') || '');
       setLastName(localStorage.getItem('checkout:lastName') || '');
       setCustomerPhone(localStorage.getItem('checkout:phone') || '');
-      setCustomerAddress(localStorage.getItem('checkout:address') || '');
+      setCustomerCep(localStorage.getItem('checkout:cep') || '');
+      setCustomerStreet(localStorage.getItem('checkout:street') || '');
+      setCustomerNumber(localStorage.getItem('checkout:number') || '');
+      setCustomerNeighborhood(localStorage.getItem('checkout:neighborhood') || '');
+      setCustomerCity(localStorage.getItem('checkout:city') || '');
+      setCustomerState(localStorage.getItem('checkout:state') || '');
+      setCustomerComplement(localStorage.getItem('checkout:complement') || '');
       setCustomerReference(localStorage.getItem('checkout:reference') || '');
       setCustomerNotes(localStorage.getItem('checkout:notes') || '');
     } catch {
@@ -189,13 +228,32 @@ export function Cart() {
       localStorage.setItem('checkout:firstName', firstName);
       localStorage.setItem('checkout:lastName', lastName);
       localStorage.setItem('checkout:phone', customerPhone);
-      localStorage.setItem('checkout:address', customerAddress);
+      localStorage.setItem('checkout:cep', customerCep);
+      localStorage.setItem('checkout:street', customerStreet);
+      localStorage.setItem('checkout:number', customerNumber);
+      localStorage.setItem('checkout:neighborhood', customerNeighborhood);
+      localStorage.setItem('checkout:city', customerCity);
+      localStorage.setItem('checkout:state', customerState);
+      localStorage.setItem('checkout:complement', customerComplement);
       localStorage.setItem('checkout:reference', customerReference);
       localStorage.setItem('checkout:notes', customerNotes);
     } catch {
       //
     }
-  }, [firstName, lastName, customerPhone, customerAddress, customerReference, customerNotes]);
+  }, [
+    firstName,
+    lastName,
+    customerPhone,
+    customerCep,
+    customerStreet,
+    customerNumber,
+    customerNeighborhood,
+    customerCity,
+    customerState,
+    customerComplement,
+    customerReference,
+    customerNotes,
+  ]);
 
   const storeIdFromQuery = searchParams.get('store');
   const slugFromQuery = searchParams.get('slug');
@@ -298,6 +356,43 @@ export function Cart() {
     toast.info('Cupom removido');
   };
 
+  const handleSearchCep = async () => {
+    const cep = onlyDigits(customerCep);
+
+    if (!cep) {
+      toast.error('Informe o CEP');
+      return;
+    }
+
+    if (cep.length !== 8) {
+      toast.error('Informe um CEP válido com 8 números');
+      return;
+    }
+
+    try {
+      setCepLoading(true);
+
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await response.json();
+
+      if (!response.ok || data?.erro) {
+        throw new Error('CEP não encontrado');
+      }
+
+      setCustomerStreet(data.logradouro || '');
+      setCustomerNeighborhood(data.bairro || '');
+      setCustomerCity(data.localidade || '');
+      setCustomerState(data.uf || '');
+
+      toast.success('Endereço preenchido pelo CEP');
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+      toast.error('Não foi possível buscar o CEP');
+    } finally {
+      setCepLoading(false);
+    }
+  };
+
   const subtotal = Number(total || 0);
   const discount = appliedCoupon ? (subtotal * appliedCoupon.discount) / 100 : 0;
   const deliveryFee = Math.max(Number((store as any)?.deliveryFee || 0), 0);
@@ -319,7 +414,13 @@ export function Cart() {
     const trimmedFirstName = String(firstName || '').trim();
     const trimmedLastName = String(lastName || '').trim();
     const trimmedPhone = onlyDigits(customerPhone);
-    const trimmedAddress = String(customerAddress || '').trim();
+    const trimmedCep = onlyDigits(customerCep);
+    const trimmedStreet = String(customerStreet || '').trim();
+    const trimmedNumber = String(customerNumber || '').trim();
+    const trimmedNeighborhood = String(customerNeighborhood || '').trim();
+    const trimmedCity = String(customerCity || '').trim();
+    const trimmedState = String(customerState || '').trim();
+    const trimmedComplement = String(customerComplement || '').trim();
     const trimmedReference = String(customerReference || '').trim();
     const trimmedNotes = String(customerNotes || '').trim();
 
@@ -338,12 +439,47 @@ export function Cart() {
       return;
     }
 
-    if (!trimmedAddress) {
-      toast.error('Informe o endereço');
+    if (trimmedCep.length !== 8) {
+      toast.error('Informe um CEP válido');
+      return;
+    }
+
+    if (!trimmedStreet) {
+      toast.error('Informe a rua');
+      return;
+    }
+
+    if (!trimmedNumber) {
+      toast.error('Informe o número');
+      return;
+    }
+
+    if (!trimmedNeighborhood) {
+      toast.error('Informe o bairro');
+      return;
+    }
+
+    if (!trimmedCity) {
+      toast.error('Informe a cidade');
+      return;
+    }
+
+    if (!trimmedState) {
+      toast.error('Informe o estado');
       return;
     }
 
     const customerFullName = `${trimmedFirstName} ${trimmedLastName}`.trim();
+
+    const fullAddress = buildFullAddress({
+      street: trimmedStreet,
+      number: trimmedNumber,
+      neighborhood: trimmedNeighborhood,
+      city: trimmedCity,
+      state: trimmedState,
+      complement: trimmedComplement,
+      cep: trimmedCep,
+    });
 
     const rawWhatsapp =
       (store as any)?.whatsapp ||
@@ -359,6 +495,13 @@ export function Cart() {
       return;
     }
 
+    const extraNotesParts = [
+      trimmedNotes,
+      trimmedCep ? `CEP: ${trimmedCep}` : '',
+      trimmedComplement ? `Complemento: ${trimmedComplement}` : '',
+      appliedCoupon ? `Cupom aplicado: ${appliedCoupon.code}` : '',
+    ].filter(Boolean);
+
     setSubmitting(true);
 
     try {
@@ -366,13 +509,9 @@ export function Cart() {
         storeId: String(storeId),
         customerName: customerFullName,
         customerPhone: trimmedPhone,
-        customerAddress: trimmedAddress,
+        customerAddress: fullAddress,
         customerReference: trimmedReference,
-        customerNotes: trimmedNotes
-          ? trimmedNotes
-          : appliedCoupon
-            ? `Cupom aplicado: ${appliedCoupon.code}`
-            : '',
+        customerNotes: extraNotesParts.join(' | '),
         paymentMethod: 'whatsapp',
         items: items.map((item: any) => ({
           id: String(item?.product?.id || item?.id || ''),
@@ -626,15 +765,94 @@ export function Cart() {
                     />
                   </div>
 
+                  <div>
+                    <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <MapPin className="h-4 w-4 text-[#EA1D2C]" />
+                      CEP
+                    </label>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="00000000"
+                        value={customerCep}
+                        onChange={(e) => setCustomerCep(e.target.value)}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleSearchCep}
+                        disabled={cepLoading}
+                        className="shrink-0 border-[#EA1D2C] text-[#EA1D2C] hover:bg-[#EA1D2C] hover:text-white"
+                      >
+                        <Search className="mr-2 h-4 w-4" />
+                        {cepLoading ? 'Buscando...' : 'Buscar'}
+                      </Button>
+                    </div>
+                  </div>
+
                   <div className="md:col-span-2">
                     <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
                       <MapPin className="h-4 w-4 text-[#EA1D2C]" />
-                      Endereço
+                      Rua
                     </label>
                     <Input
-                      placeholder="Rua, número, bairro..."
-                      value={customerAddress}
-                      onChange={(e) => setCustomerAddress(e.target.value)}
+                      placeholder="Rua"
+                      value={customerStreet}
+                      onChange={(e) => setCustomerStreet(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Número
+                    </label>
+                    <Input
+                      placeholder="Número"
+                      value={customerNumber}
+                      onChange={(e) => setCustomerNumber(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Bairro
+                    </label>
+                    <Input
+                      placeholder="Bairro"
+                      value={customerNeighborhood}
+                      onChange={(e) => setCustomerNeighborhood(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Cidade
+                    </label>
+                    <Input
+                      placeholder="Cidade"
+                      value={customerCity}
+                      onChange={(e) => setCustomerCity(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Estado
+                    </label>
+                    <Input
+                      placeholder="UF"
+                      value={customerState}
+                      onChange={(e) => setCustomerState(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Complemento
+                    </label>
+                    <Input
+                      placeholder="Casa, apto, bloco..."
+                      value={customerComplement}
+                      onChange={(e) => setCustomerComplement(e.target.value)}
                     />
                   </div>
 
@@ -649,7 +867,7 @@ export function Cart() {
                     />
                   </div>
 
-                  <div>
+                  <div className="md:col-span-2">
                     <label className="mb-2 block text-sm font-medium text-gray-700">
                       Observações
                     </label>
