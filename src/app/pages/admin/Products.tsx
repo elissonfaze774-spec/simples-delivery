@@ -99,6 +99,9 @@ function createEmptyExtra(): ProductExtraForm {
   }
 }
 
+const fieldClassName =
+  'border border-red-950/60 bg-[#0b0b0b] text-white placeholder:text-zinc-500 focus-visible:border-red-500/60 focus-visible:ring-1 focus-visible:ring-red-500/30'
+
 export function AdminProducts() {
   const navigate = useNavigate()
   const { user, authLoading } = useAuth()
@@ -494,14 +497,14 @@ export function AdminProducts() {
             <DialogTrigger asChild>
               <Button
                 variant="outline"
-                className="rounded-full border-red-500 bg-white text-black hover:bg-zinc-100 hover:text-black"
+                className="rounded-full border-red-950/60 bg-[#0b0b0b] text-white hover:bg-[#141414] hover:text-white"
               >
                 <FolderPlus className="mr-2 h-4 w-4" />
                 Nova categoria
               </Button>
             </DialogTrigger>
 
-            <DialogContent className="bg-black border-red-900 text-white">
+            <DialogContent className="border border-red-950/60 bg-[#050505] text-white shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
               <DialogHeader>
                 <DialogTitle>
                   {editingCategory ? 'Editar categoria' : 'Nova categoria'}
@@ -521,14 +524,14 @@ export function AdminProducts() {
                     value={categoryName}
                     onChange={(e) => setCategoryName(e.target.value)}
                     placeholder="Ex: Hambúrgueres"
-                    className="bg-white text-black border border-zinc-300"
+                    className={fieldClassName}
                   />
                 </div>
 
                 <Button
                   type="submit"
                   disabled={savingCategory}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white"
+                  className="w-full rounded-full bg-[#ff1833] text-white hover:bg-[#ff2942]"
                 >
                   {savingCategory
                     ? 'Salvando...'
@@ -542,13 +545,13 @@ export function AdminProducts() {
 
           <Dialog open={openProduct} onOpenChange={handleOpenChangeProduct}>
             <DialogTrigger asChild>
-              <Button className="rounded-full bg-red-500 hover:bg-red-600">
+              <Button className="rounded-full bg-[#ff1833] text-white hover:bg-[#ff2942]">
                 <Plus className="mr-2 h-4 w-4" />
                 Novo produto
               </Button>
             </DialogTrigger>
 
-            <DialogContent className="bg-black border-red-900 text-white max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-h-[90vh] overflow-y-auto border border-red-950/60 bg-[#050505] text-white shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
               <DialogHeader>
                 <DialogTitle>
                   {editingProduct ? 'Editar produto' : 'Novo produto'}
@@ -568,7 +571,7 @@ export function AdminProducts() {
                     name="name"
                     value={productName}
                     onChange={(e) => setProductName(e.target.value)}
-                    className="bg-white text-black border border-zinc-300"
+                    className={fieldClassName}
                   />
                 </div>
 
@@ -579,7 +582,7 @@ export function AdminProducts() {
                     value={productDescription}
                     onChange={(e) => setProductDescription(e.target.value)}
                     placeholder="Descreva o produto"
-                    className="bg-white text-black border border-zinc-300"
+                    className={fieldClassName}
                   />
                 </div>
 
@@ -591,7 +594,7 @@ export function AdminProducts() {
                     step="0.01"
                     value={productPrice}
                     onChange={(e) => setProductPrice(e.target.value)}
-                    className="bg-white text-black border border-zinc-300"
+                    className={fieldClassName}
                   />
                 </div>
 
@@ -601,7 +604,7 @@ export function AdminProducts() {
                     name="image"
                     value={productImage}
                     onChange={(e) => setProductImage(e.target.value)}
-                    className="bg-white text-black border border-zinc-300"
+                    className={fieldClassName}
                   />
                 </div>
 
@@ -609,11 +612,11 @@ export function AdminProducts() {
                   <Label className="text-white">Categoria</Label>
 
                   <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
-                    <SelectTrigger className="bg-white text-black border border-zinc-300">
+                    <SelectTrigger className="border border-red-950/60 bg-[#0b0b0b] text-white focus:border-red-500/60 focus:ring-1 focus:ring-red-500/30">
                       <SelectValue placeholder="Categoria" />
                     </SelectTrigger>
 
-                    <SelectContent className="bg-white text-black">
+                    <SelectContent className="border border-red-950/60 bg-[#090909] text-white">
                       <SelectItem value="none">Sem categoria</SelectItem>
 
                       {categories.map((category) => (
@@ -633,7 +636,7 @@ export function AdminProducts() {
                       type="button"
                       variant="outline"
                       onClick={addExtraField}
-                      className="border-red-900 bg-white text-black hover:bg-zinc-100 hover:text-black"
+                      className="border-red-950/60 bg-[#0b0b0b] text-white hover:bg-[#141414] hover:text-white"
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Adicionar adicional
@@ -644,7 +647,7 @@ export function AdminProducts() {
                     {productExtras.map((extra, index) => (
                       <div
                         key={extra.id}
-                        className="grid grid-cols-1 gap-3 rounded-xl border border-zinc-800 bg-zinc-950 p-3 md:grid-cols-[1fr_140px_auto]"
+                        className="grid grid-cols-1 gap-3 rounded-2xl border border-red-950/60 bg-[#090909] p-3 md:grid-cols-[1fr_140px_auto]"
                       >
                         <div>
                           <Label className="text-white">Nome do adicional</Label>
@@ -652,7 +655,7 @@ export function AdminProducts() {
                             value={extra.name}
                             onChange={(e) => updateExtraField(extra.id, 'name', e.target.value)}
                             placeholder="Ex: Catchup"
-                            className="bg-white text-black border border-zinc-300"
+                            className={fieldClassName}
                           />
                         </div>
 
@@ -665,7 +668,7 @@ export function AdminProducts() {
                             value={extra.price}
                             onChange={(e) => updateExtraField(extra.id, 'price', e.target.value)}
                             placeholder="0.00"
-                            className="bg-white text-black border border-zinc-300"
+                            className={fieldClassName}
                           />
                         </div>
 
@@ -674,7 +677,7 @@ export function AdminProducts() {
                             type="button"
                             variant="outline"
                             onClick={() => removeExtraField(extra.id)}
-                            className="w-full border-red-900 bg-white text-red-500 hover:bg-zinc-100 hover:text-red-600"
+                            className="w-full border-red-950/60 bg-[#0b0b0b] text-red-400 hover:bg-[#141414] hover:text-red-300"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Remover
@@ -696,7 +699,7 @@ export function AdminProducts() {
                 <Button
                   type="submit"
                   disabled={savingProduct}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white"
+                  className="w-full rounded-full bg-[#ff1833] text-white hover:bg-[#ff2942]"
                 >
                   {savingProduct
                     ? 'Salvando...'
@@ -745,7 +748,7 @@ export function AdminProducts() {
                           size="icon"
                           variant="outline"
                           onClick={() => handleEditCategory(category)}
-                          className="bg-white text-black hover:bg-zinc-100 hover:text-black"
+                          className="border border-red-950/60 bg-[#0b0b0b] text-white hover:bg-[#141414] hover:text-white"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -754,7 +757,7 @@ export function AdminProducts() {
                           size="icon"
                           variant="outline"
                           onClick={() => handleDeleteCategory(category.id)}
-                          className="bg-white text-red-500 hover:bg-zinc-100 hover:text-red-600"
+                          className="border border-red-950/60 bg-[#0b0b0b] text-red-400 hover:bg-[#141414] hover:text-red-300"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -848,7 +851,7 @@ export function AdminProducts() {
                                 size="icon"
                                 variant="outline"
                                 onClick={() => handleEditProduct(product)}
-                                className="bg-white text-black hover:bg-zinc-100 hover:text-black"
+                                className="border border-red-950/60 bg-[#0b0b0b] text-white hover:bg-[#141414] hover:text-white"
                               >
                                 <Pencil className="h-4 w-4" />
                               </Button>
@@ -857,7 +860,7 @@ export function AdminProducts() {
                                 size="icon"
                                 variant="outline"
                                 onClick={() => handleDeleteProduct(product.id)}
-                                className="bg-white text-red-500 hover:bg-zinc-100 hover:text-red-600"
+                                className="border border-red-950/60 bg-[#0b0b0b] text-red-400 hover:bg-[#141414] hover:text-red-300"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -936,7 +939,7 @@ export function AdminProducts() {
                               size="icon"
                               variant="outline"
                               onClick={() => handleEditProduct(product)}
-                              className="bg-white text-black hover:bg-zinc-100 hover:text-black"
+                              className="border border-red-950/60 bg-[#0b0b0b] text-white hover:bg-[#141414] hover:text-white"
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
@@ -945,7 +948,7 @@ export function AdminProducts() {
                               size="icon"
                               variant="outline"
                               onClick={() => handleDeleteProduct(product.id)}
-                              className="bg-white text-red-500 hover:bg-zinc-100 hover:text-red-600"
+                              className="border border-red-950/60 bg-[#0b0b0b] text-red-400 hover:bg-[#141414] hover:text-red-300"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>

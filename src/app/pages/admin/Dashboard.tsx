@@ -85,7 +85,7 @@ function DashboardSection({
     >
       {(eyebrow || title || action) && (
         <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
+          <div className="min-w-0">
             {eyebrow ? (
               <div className="mb-2 inline-flex rounded-full border border-[#f3162d]/25 bg-[#f3162d]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-[#ff2c42]">
                 {eyebrow}
@@ -93,7 +93,7 @@ function DashboardSection({
             ) : null}
 
             {title ? (
-              <h2 className="text-2xl font-black tracking-tight text-white">{title}</h2>
+              <h2 className="text-xl font-black tracking-tight text-white sm:text-2xl">{title}</h2>
             ) : null}
           </div>
 
@@ -118,16 +118,16 @@ function MetricBox({
   money?: boolean;
 }) {
   return (
-    <div className="rounded-[24px] border border-white/8 bg-[#090909] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+    <div className="min-w-0 rounded-[24px] border border-white/8 bg-[#090909] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
       <p className="text-sm text-zinc-400">{label}</p>
       <div
-        className={`mt-2 text-[2rem] font-black tracking-tight ${
+        className={`mt-2 min-w-0 break-words text-xl font-black leading-tight tracking-tight sm:text-[2rem] ${
           money ? 'text-emerald-400' : 'text-white'
         }`}
       >
         {value}
       </div>
-      <p className="mt-2 text-sm text-zinc-500">{helper}</p>
+      <p className="mt-2 text-sm leading-relaxed text-zinc-500">{helper}</p>
     </div>
   );
 }
@@ -148,19 +148,19 @@ function SummaryCard({
   return (
     <div className="rounded-[26px] border border-red-950/40 bg-[#0b0b0b] p-5 shadow-[0_16px_40px_rgba(0,0,0,0.25)]">
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-zinc-400">{label}</p>
           <div
-            className={`mt-3 text-2xl font-black tracking-tight ${
+            className={`mt-3 min-w-0 break-words text-xl font-black leading-tight tracking-tight sm:text-2xl ${
               money ? 'text-emerald-400' : 'text-white'
             }`}
           >
             {value}
           </div>
-          <p className="mt-2 text-sm text-zinc-500">{helper}</p>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-500">{helper}</p>
         </div>
 
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/8 bg-[#121218] text-zinc-200">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/8 bg-[#121218] text-zinc-200">
           <Icon className="h-5 w-5" />
         </div>
       </div>
@@ -177,13 +177,13 @@ function ShortcutCard({ item }: { item: ShortcutItem }) {
       onClick={item.onClick}
       className="flex w-full items-center justify-between gap-4 rounded-[26px] border border-red-950/40 bg-[#0a0a0a] p-5 text-left shadow-[0_16px_40px_rgba(0,0,0,0.25)] transition hover:border-[#f3162d]/35 hover:bg-[#101010]"
     >
-      <div className="flex items-center gap-4">
+      <div className="flex min-w-0 items-center gap-4">
         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#f3162d]/20 bg-[#22090d] text-[#ff2541]">
           <Icon className="h-5 w-5" />
         </div>
 
-        <div>
-          <div className="text-2xl font-black tracking-tight text-white sm:text-xl">
+        <div className="min-w-0">
+          <div className="text-lg font-black tracking-tight text-white sm:text-xl">
             {item.label}
           </div>
           <p className="mt-1 text-sm text-zinc-400">{item.description}</p>
@@ -204,7 +204,7 @@ function RevenueChart({ data }: { data: DailyChartItem[] }) {
         <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#ff2c42]">
           Desempenho diário
         </div>
-        <h3 className="mt-2 text-2xl font-black tracking-tight text-white">
+        <h3 className="mt-2 text-xl font-black tracking-tight text-white sm:text-2xl">
           Faturamento dos últimos 7 dias
         </h3>
         <div className="mt-4 inline-flex rounded-full border border-[#f3162d]/25 bg-[#1b090d] px-3 py-1 text-sm text-[#ff2c42]">
@@ -212,30 +212,35 @@ function RevenueChart({ data }: { data: DailyChartItem[] }) {
         </div>
       </div>
 
-      <div className="flex min-h-[250px] items-end justify-between gap-2 sm:gap-3">
-        {data.map((item) => {
-          const height = Math.max((item.total / maxValue) * 165, 8);
+      <div className="-mx-1 overflow-x-auto px-1">
+        <div className="flex min-h-[250px] min-w-[560px] items-end justify-between gap-3 sm:min-w-0 sm:gap-3">
+          {data.map((item) => {
+            const height = Math.max((item.total / maxValue) * 165, 8);
 
-          return (
-            <div key={item.label} className="flex min-w-0 flex-1 flex-col items-center justify-end">
-              <div className="mb-3 text-center text-sm font-bold text-emerald-400">
-                {item.total > 0 ? formatMoney(item.total) : 'R$ 0,00'}
-              </div>
+            return (
+              <div
+                key={item.label}
+                className="flex min-w-[64px] flex-1 flex-col items-center justify-end"
+              >
+                <div className="mb-3 max-w-[72px] text-center text-[11px] font-bold leading-tight text-emerald-400 sm:max-w-none sm:text-sm">
+                  {item.total > 0 ? formatMoney(item.total) : 'R$ 0,00'}
+                </div>
 
-              <div className="flex h-[170px] w-full items-end justify-center">
-                <div
-                  className="w-full rounded-t-[16px] bg-gradient-to-b from-emerald-300 to-emerald-700 shadow-[0_0_18px_rgba(16,185,129,0.25)]"
-                  style={{ height: `${height}px` }}
-                />
-              </div>
+                <div className="flex h-[170px] w-full items-end justify-center">
+                  <div
+                    className="w-full rounded-t-[16px] bg-gradient-to-b from-emerald-300 to-emerald-700 shadow-[0_0_18px_rgba(16,185,129,0.25)]"
+                    style={{ height: `${height}px` }}
+                  />
+                </div>
 
-              <div className="mt-4 text-lg font-black text-white">{item.label}</div>
-              <div className="mt-1 text-sm text-zinc-500">
-                {item.orders} {item.orders === 1 ? 'pedido' : 'pedidos'}
+                <div className="mt-4 text-sm font-black text-white sm:text-lg">{item.label}</div>
+                <div className="mt-1 max-w-[72px] text-center text-[11px] leading-tight text-zinc-500 sm:max-w-none sm:text-sm">
+                  {item.orders} {item.orders === 1 ? 'pedido' : 'pedidos'}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       <div className="mt-4 h-[2px] w-full rounded-full bg-[#651019]" />
@@ -263,7 +268,7 @@ function SuspensionNoticeCard({ isSuspended, isClosed }: { isSuspended: boolean;
           {isSuspended ? <AlertCircle className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </div>
 
-        <div>
+        <div className="min-w-0">
           <h3 className="text-lg font-bold text-white">
             {isSuspended ? 'Loja temporariamente indisponível' : 'Loja fechada no momento'}
           </h3>
@@ -309,11 +314,11 @@ function WelcomeCard({
           </div>
         </div>
 
-        <div>
-          <h2 className="text-4xl font-black tracking-tight text-white">
+        <div className="min-w-0">
+          <h2 className="text-2xl font-black tracking-tight text-white sm:text-4xl">
             BEM-VINDO AO PAINEL DE VENDAS
           </h2>
-          <p className="mt-3 max-w-3xl text-base leading-7 text-zinc-300">
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300 sm:text-base sm:leading-7">
             Acompanhe faturamento, pedidos, crescimento e desempenho em um painel mais limpo,
             profissional e fácil de usar.
           </p>
@@ -360,7 +365,7 @@ function StoreLinkCard({
           <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
             URL pública
           </div>
-          <div className="mt-3 break-all text-base font-semibold text-white">
+          <div className="mt-3 break-all text-sm font-semibold text-white sm:text-base">
             {storeUrl || 'Link indisponível'}
           </div>
         </div>
@@ -469,37 +474,37 @@ function MonthlySummarySection({
       }
     >
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <div className="rounded-[24px] border border-white/8 bg-[#070707] p-5">
+        <div className="min-w-0 rounded-[24px] border border-white/8 bg-[#070707] p-5">
           <p className="text-sm text-zinc-400">Faturamento mensal</p>
-          <div className="mt-3 text-[2rem] font-black tracking-tight text-emerald-400">
+          <div className="mt-3 break-words text-xl font-black leading-tight tracking-tight text-emerald-400 sm:text-[2rem]">
             {formatMoney(monthTotal)}
           </div>
         </div>
 
-        <div className="rounded-[24px] border border-white/8 bg-[#070707] p-5">
+        <div className="min-w-0 rounded-[24px] border border-white/8 bg-[#070707] p-5">
           <p className="text-sm text-zinc-400">Pedidos do mês</p>
-          <div className="mt-3 text-[2rem] font-black tracking-tight text-white">
+          <div className="mt-3 break-words text-xl font-black leading-tight tracking-tight text-white sm:text-[2rem]">
             {monthCount}
           </div>
         </div>
 
-        <div className="rounded-[24px] border border-white/8 bg-[#070707] p-5">
+        <div className="min-w-0 rounded-[24px] border border-white/8 bg-[#070707] p-5">
           <p className="text-sm text-zinc-400">Ticket médio</p>
-          <div className="mt-3 text-[2rem] font-black tracking-tight text-emerald-400">
+          <div className="mt-3 break-words text-xl font-black leading-tight tracking-tight text-emerald-400 sm:text-[2rem]">
             {formatMoney(ticketAverage)}
           </div>
         </div>
 
-        <div className="rounded-[24px] border border-white/8 bg-[#070707] p-5">
+        <div className="min-w-0 rounded-[24px] border border-white/8 bg-[#070707] p-5">
           <p className="text-sm text-zinc-400">Plano atual</p>
-          <div className="mt-3 text-[2rem] font-black tracking-tight text-white">
+          <div className="mt-3 break-words text-xl font-black leading-tight tracking-tight text-white sm:text-[2rem]">
             {plan || 'Premium'}
           </div>
         </div>
 
-        <div className="rounded-[24px] border border-white/8 bg-[#070707] p-5">
+        <div className="min-w-0 rounded-[24px] border border-white/8 bg-[#070707] p-5">
           <p className="text-sm text-zinc-400">WhatsApp da loja</p>
-          <div className="mt-3 break-all text-[2rem] font-black tracking-tight text-white">
+          <div className="mt-3 break-all text-lg font-black leading-tight tracking-tight text-white sm:text-[2rem]">
             {whatsapp || 'Não informado'}
           </div>
         </div>
