@@ -9,12 +9,19 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<User | null>;
   logout: () => Promise<void>;
   createUser: (email: string, password: string, storeId: string) => Promise<boolean>;
+  createDeliveryDriverUser: (
+    email: string,
+    password: string,
+    storeId: string,
+    deliveryDriverId: string,
+    name?: string
+  ) => Promise<boolean>;
   resetPassword: (email: string, newPassword: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-type AppRole = 'admin' | 'super-admin';
+type AppRole = 'admin' | 'super-admin' | 'delivery-driver';
 
 async function withTimeout<T>(fn: () => Promise<T>, ms = 15000): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -114,22 +121,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!isAbortLikeError(error) && !isMissingColumnError(error, 'role')) {
           console.error('Erro ao buscar role em profiles:', error);
         }
-        return 'admin';
+      } else {
+        const dbRole = String(profile?.role ?? '').trim().toLowerCase();
+
+        if (dbRole === 'super_admin' || dbRole === 'super-admin') {
+          return 'super-admin';
+        }
+
+        if (
+          dbRole === 'delivery_driver' ||
+          dbRole === 'delivery-driver' ||
+          dbRole === 'entregador'
+        ) {
+          return 'delivery-driver';
+        }
+
+        if (dbRole === 'admin') {
+          return 'admin';
+        }
       }
-
-      const dbRole = String(profile?.role ?? '').trim().toLowerCase();
-
-      if (dbRole === 'super_admin' || dbRole === 'super-admin') {
-        return 'super-admin';
-      }
-
-      return 'admin';
     } catch (error) {
       if (!isAbortLikeError(error)) {
         console.error('Erro inesperado ao resolver role do usuário:', error);
       }
-      return 'admin';
     }
+
+    try {
+      const { data: driver, error: driverError } = await withTimeout(
+        async () =>
+          await supabase
+            .from('delivery_drivers')
+            .select('id, email, store_id, active')
+            .ilike('email', normalizedEmail)
+            .eq('active', true)
+            .maybeSingle(),
+        12000
+      );
+
+      if (!driverError && driver) {
+        return 'delivery-driver';
+      }
+
+      if (driverError && !isAbortLikeError(driverError)) {
+        console.error('Erro ao verificar entregador por email:', driverError);
+      }
+    } catch (error) {
+      if (!isAbortLikeError(error)) {
+        console.error('Erro ao verificar entregador por email:', error);
+      }
+    }
+
+    return 'admin';
   };
 
   const buildUserFromSession = async (authUser: any): Promise<User | null> => {
@@ -137,10 +179,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const normalizedEmail = normalizeEmail(authUser.email);
     let storeId: string | undefined;
+    let deliveryDriverId: string | undefined;
+    let name: string | undefined;
 
     const role = await resolveUserRole(authUser);
 
     try {
+      if (role === 'delivery-driver') {
+        try {
+          const { data: driver, error: driverError } = await withTimeout(
+            async () =>
+              await supabase
+                .from('delivery_drivers')
+                .select('id, store_id, name, email, active')
+                .ilike('email', normalizedEmail)
+                .maybeSingle(),
+            12000
+          );
+
+          if (driverError) {
+            if (!isAbortLikeError(driverError)) {
+              console.error('Erro ao buscar entregador:', driverError);
+            }
+          } else if (driver) {
+            deliveryDriverId = String(driver.id);
+            storeId = String(driver.store_id);
+            name = String(driver.name || '');
+          }
+        } catch (error) {
+          if (!isAbortLikeError(error)) {
+            console.error('Erro inesperado ao buscar entregador:', error);
+          }
+        }
+      }
+
       if (role === 'admin') {
         try {
           const { data: storeByOwner, error: ownerError } = await withTimeout(
@@ -203,34 +275,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: normalizedEmail,
       role,
       storeId,
+      deliveryDriverId,
+      name,
     };
   };
 
   const loadUsersList = async () => {
     try {
-      const { data, error } = await withTimeout(
-        async () =>
-          await supabase
-            .from('stores')
-            .select('id, admin_email')
-            .order('created_at', { ascending: true }),
-        12000
-      );
+      const [storesResult, driversResult] = await Promise.all([
+        withTimeout(
+          async () =>
+            await supabase
+              .from('stores')
+              .select('id, admin_email')
+              .order('created_at', { ascending: true }),
+          12000
+        ),
+        withTimeout(
+          async () =>
+            await supabase
+              .from('delivery_drivers')
+              .select('id, email, store_id, name, active')
+              .order('created_at', { ascending: true }),
+          12000
+        ),
+      ]);
 
-      if (error) {
-        if (!isAbortLikeError(error)) {
-          console.error('Erro ao carregar lista de admins:', error);
+      const { data: storesData, error: storesError } = storesResult;
+      const { data: driversData, error: driversError } = driversResult;
+
+      if (storesError) {
+        if (!isAbortLikeError(storesError)) {
+          console.error('Erro ao carregar lista de admins:', storesError);
         }
-        if (isMounted.current) setUsers([]);
-        return;
       }
 
-      const mappedUsers: Array<User & { password?: string }> = (data ?? []).map((row: any) => ({
-        id: String(row.id),
-        email: normalizeEmail(row.admin_email),
-        role: 'admin',
-        storeId: String(row.id),
-      }));
+      if (driversError) {
+        if (!isAbortLikeError(driversError)) {
+          console.error('Erro ao carregar lista de entregadores:', driversError);
+        }
+      }
+
+      const mappedUsers: Array<User & { password?: string }> = [
+        ...((storesData ?? []).map((row: any) => ({
+          id: String(row.id),
+          email: normalizeEmail(row.admin_email),
+          role: 'admin' as const,
+          storeId: String(row.id),
+        })) ?? []),
+        ...((driversData ?? []).map((row: any) => ({
+          id: String(row.id),
+          email: normalizeEmail(row.email),
+          role: 'delivery-driver' as const,
+          storeId: String(row.store_id),
+          deliveryDriverId: String(row.id),
+          name: String(row.name || ''),
+        })) ?? []),
+      ];
 
       const hasSuperAdmin = mappedUsers.some((u) => u.email === superAdminEmail);
 
@@ -245,7 +346,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (isMounted.current) setUsers(mappedUsers);
     } catch (error) {
       if (!isAbortLikeError(error)) {
-        console.error('Timeout/erro ao carregar lista de admins:', error);
+        console.error('Timeout/erro ao carregar lista de usuários:', error);
       }
       if (isMounted.current) setUsers([]);
     }
@@ -481,6 +582,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const createDeliveryDriverUser = async (
+    email: string,
+    _password: string,
+    storeId: string,
+    deliveryDriverId: string,
+    name?: string
+  ): Promise<boolean> => {
+    try {
+      const normalizedEmail = normalizeEmail(email);
+
+      const { error } = await withTimeout(
+        async () =>
+          await supabase
+            .from('delivery_drivers')
+            .update({
+              email: normalizedEmail,
+              store_id: storeId,
+              name: name || undefined,
+              active: true,
+            })
+            .eq('id', deliveryDriverId),
+        12000
+      );
+
+      if (error) {
+        console.error('Erro ao vincular login do entregador:', error);
+        return false;
+      }
+
+      void loadUsersList();
+      return true;
+    } catch (error) {
+      console.error('Erro ao preparar vínculo do entregador:', error);
+      return false;
+    }
+  };
+
   const logout = async () => {
     if (isMounted.current) {
       setAuthLoading(true);
@@ -537,6 +675,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         createUser,
+        createDeliveryDriverUser,
         resetPassword,
       }}
     >
@@ -553,4 +692,4 @@ export function useAuth() {
   }
 
   return context;
-} 
+}

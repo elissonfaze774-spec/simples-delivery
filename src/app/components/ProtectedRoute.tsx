@@ -1,11 +1,14 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import type { User } from '../types';
 
-interface ProtectedRouteProps {
+type AllowedRole = User['role'];
+
+type ProtectedRouteProps = {
   children: React.ReactNode;
-  allowedRoles: Array<'admin' | 'super-admin'>;
-}
+  allowedRoles: AllowedRole[];
+};
 
 export default function ProtectedRoute({
   children,
@@ -14,14 +17,10 @@ export default function ProtectedRoute({
   const { user, authLoading } = useAuth();
   const location = useLocation();
 
-  if (user && allowedRoles.includes(user.role)) {
-    return <>{children}</>;
-  }
-
   if (authLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <div className="text-sm text-gray-500">Carregando...</div>
+      <div className="flex min-h-screen items-center justify-center bg-[color:var(--color-bg)] text-[color:var(--color-text)]">
+        <div className="text-sm font-medium">Carregando...</div>
       </div>
     );
   }
@@ -31,12 +30,15 @@ export default function ProtectedRoute({
   }
 
   if (!allowedRoles.includes(user.role)) {
-    return (
-      <Navigate
-        to={user.role === 'super-admin' ? '/super-admin' : '/admin'}
-        replace
-      />
-    );
+    if (user.role === 'super-admin') {
+      return <Navigate to="/super-admin" replace />;
+    }
+
+    if (user.role === 'delivery-driver') {
+      return <Navigate to="/driver" replace />;
+    }
+
+    return <Navigate to="/admin" replace />;
   }
 
   return <>{children}</>;

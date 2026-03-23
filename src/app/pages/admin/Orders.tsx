@@ -1,4 +1,13 @@
-import { Package, Search, Trash2, ShoppingBag, CheckSquare, Printer } from 'lucide-react';
+import {
+  Package,
+  Search,
+  Trash2,
+  ShoppingBag,
+  CheckSquare,
+  Printer,
+  Bike,
+  UserRound,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -54,6 +63,48 @@ const statusMap: Record<OrderStatus, { label: string; badgeClass: string; select
   },
 };
 
+const deliveryStatusMap: Record<
+  string,
+  { label: string; badgeClass: string }
+> = {
+  unassigned: {
+    label: 'Sem entregador',
+    badgeClass: 'border-zinc-500/30 bg-zinc-500/10 text-zinc-300',
+  },
+  assigned: {
+    label: 'Atribuído',
+    badgeClass: 'border-sky-500/30 bg-sky-500/10 text-sky-300',
+  },
+  accepted: {
+    label: 'Aceito',
+    badgeClass: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300',
+  },
+  picked_up: {
+    label: 'Retirado',
+    badgeClass: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+  },
+  out_for_delivery: {
+    label: 'Em rota',
+    badgeClass: 'border-violet-500/30 bg-violet-500/10 text-violet-300',
+  },
+  delivered: {
+    label: 'Entregue',
+    badgeClass: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+  },
+  failed: {
+    label: 'Falhou',
+    badgeClass: 'border-rose-500/30 bg-rose-500/10 text-rose-300',
+  },
+  returned: {
+    label: 'Retornou',
+    badgeClass: 'border-orange-500/30 bg-orange-500/10 text-orange-300',
+  },
+  cancelled: {
+    label: 'Cancelado',
+    badgeClass: 'border-rose-500/30 bg-rose-500/10 text-rose-300',
+  },
+};
+
 function formatMoney(value: number) {
   return Number(value || 0).toLocaleString('pt-BR', {
     style: 'currency',
@@ -81,19 +132,38 @@ function escapeHtml(value: unknown) {
     .replace(/'/g, '&#039;');
 }
 
+function getOrderType(order: any): 'delivery' | 'pickup' {
+  if (order?.deliveryMethod === 'pickup') return 'pickup';
+  if (order?.deliveryMethod === 'delivery') return 'delivery';
+  return order?.customerAddress ? 'delivery' : 'pickup';
+}
+
 type OrderViewMode = 'all' | 'today';
 
 export function AdminOrders() {
   const navigate = useNavigate();
   const { user, authLoading } = useAuth();
-  const { getStoreOrders, updateOrderStatus, refreshOrders } = useOrders();
-  const { getStore, getStoreByAdminEmail, isLoaded, stores } = useStore();
+  const {
+    getStoreOrders,
+    updateOrderStatus,
+    refreshOrders,
+    assignDriverToOrder,
+    unassignDriverFromOrder,
+  } = useOrders();
+  const {
+    getStore,
+    getStoreByAdminEmail,
+    getStoreDeliveryDrivers,
+    isLoaded,
+    stores,
+  } = useStore();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [authChecked, setAuthChecked] = useState(false);
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<OrderViewMode>('all');
+  const [assigningOrderIds, setAssigningOrderIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -126,6 +196,11 @@ export function AdminOrders() {
     [getStoreOrders, resolvedStore]
   );
 
+  const storeDrivers = useMemo(
+    () => (resolvedStore ? getStoreDeliveryDrivers(resolvedStore.id) : []),
+    [getStoreDeliveryDrivers, resolvedStore]
+  );
+
   const visibleOrders = useMemo(() => {
     if (viewMode === 'today') {
       return storeOrders.filter((order) => isToday(order.createdAt));
@@ -139,7 +214,15 @@ export function AdminOrders() {
     if (!query) return visibleOrders;
 
     return visibleOrders.filter((order) =>
-      String(order.code || '').toLowerCase().includes(query)
+      [
+        String(order.code || ''),
+        String(order.customerName || ''),
+        String(order.customerPhone || ''),
+        String(order.deliveryDriverName || ''),
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(query)
     );
   }, [searchTerm, visibleOrders]);
 
@@ -218,10 +301,7 @@ export function AdminOrders() {
             <meta charset="UTF-8" />
             <title>Imprimir pedido ${escapeHtml(order.code || '')}</title>
             <style>
-              * {
-                box-sizing: border-box;
-              }
-
+              * { box-sizing: border-box; }
               html, body {
                 margin: 0;
                 padding: 0;
@@ -229,41 +309,29 @@ export function AdminOrders() {
                 color: #000000;
                 font-family: Arial, Helvetica, sans-serif;
               }
-
               body {
                 padding: 16px;
                 width: 80mm;
                 max-width: 80mm;
                 margin: 0 auto;
               }
-
-              .center {
-                text-align: center;
-              }
-
+              .center { text-align: center; }
               .store-name {
                 font-size: 18px;
                 font-weight: 700;
                 margin-bottom: 4px;
               }
-
-              .muted {
-                font-size: 12px;
-                color: #333333;
-              }
-
+              .muted { font-size: 12px; color: #333333; }
               .divider {
                 border-top: 1px dashed #000;
                 margin: 12px 0;
               }
-
               .section-title {
                 font-size: 12px;
                 font-weight: 700;
                 text-transform: uppercase;
                 margin-bottom: 6px;
               }
-
               .line {
                 display: flex;
                 align-items: flex-start;
@@ -272,21 +340,15 @@ export function AdminOrders() {
                 font-size: 13px;
                 margin-bottom: 4px;
               }
-
               .line span:last-child {
                 text-align: right;
                 white-space: nowrap;
               }
-
               .item {
                 padding: 8px 0;
                 border-bottom: 1px dashed #d4d4d4;
               }
-
-              .item:last-child {
-                border-bottom: none;
-              }
-
+              .item:last-child { border-bottom: none; }
               .item-top,
               .extra-line {
                 display: flex;
@@ -295,21 +357,15 @@ export function AdminOrders() {
                 gap: 8px;
                 font-size: 13px;
               }
-
-              .item-top {
-                font-weight: 700;
-              }
-
+              .item-top { font-weight: 700; }
               .extras {
                 margin-top: 4px;
                 padding-left: 8px;
               }
-
               .extra-line {
                 font-size: 12px;
                 margin-top: 2px;
               }
-
               .item-note,
               .note-box {
                 margin-top: 6px;
@@ -317,11 +373,7 @@ export function AdminOrders() {
                 white-space: pre-wrap;
                 word-break: break-word;
               }
-
-              .total-box {
-                margin-top: 10px;
-              }
-
+              .total-box { margin-top: 10px; }
               .total {
                 display: flex;
                 align-items: center;
@@ -330,13 +382,11 @@ export function AdminOrders() {
                 font-weight: 700;
                 margin-top: 6px;
               }
-
               @media print {
                 @page {
                   size: 80mm auto;
                   margin: 4mm;
                 }
-
                 body {
                   width: auto;
                   max-width: none;
@@ -477,6 +527,8 @@ export function AdminOrders() {
     filteredOrders.every((order) => selectedIds.includes(order.id));
 
   const totalTodayOrders = storeOrders.filter((order) => isToday(order.createdAt)).length;
+  const totalDeliveryOrders = storeOrders.filter((order) => getOrderType(order) === 'delivery').length;
+  const totalAssignedOrders = storeOrders.filter((order) => !!order.deliveryDriverId).length;
 
   const toggleSelectOrder = (id: string) => {
     setSelectedIds((prev) =>
@@ -560,6 +612,38 @@ export function AdminOrders() {
     }
   };
 
+  const handleDriverChange = async (order: any, nextDriverId: string) => {
+    try {
+      setAssigningOrderIds((prev) => [...prev, order.id]);
+
+      if (nextDriverId === 'unassigned') {
+        await unassignDriverFromOrder(order.id);
+        toast.success('Entregador removido do pedido.');
+        return;
+      }
+
+      const driver = storeDrivers.find((item) => item.id === nextDriverId);
+
+      if (!driver) {
+        toast.error('Entregador não encontrado.');
+        return;
+      }
+
+      await assignDriverToOrder({
+        orderId: order.id,
+        deliveryDriverId: driver.id,
+        deliveryDriverName: driver.name,
+      });
+
+      toast.success(`Pedido vinculado a ${driver.name}.`);
+    } catch (error) {
+      console.error('Erro ao vincular entregador:', error);
+      toast.error('Não foi possível vincular o entregador.');
+    } finally {
+      setAssigningOrderIds((prev) => prev.filter((id) => id !== order.id));
+    }
+  };
+
   return (
     <AdminShell
       title="Pedidos"
@@ -581,8 +665,14 @@ export function AdminOrders() {
           value: storeOrders.filter((o) => o.status === 'completed').length,
         },
         {
-          label: 'Cancelados',
-          value: storeOrders.filter((o) => o.status === 'cancelled').length,
+          label: 'Em entrega',
+          value: totalDeliveryOrders,
+          helper: 'Pedidos com entrega',
+        },
+        {
+          label: 'Com entregador',
+          value: totalAssignedOrders,
+          helper: 'Pedidos atribuídos',
         },
       ]}
     >
@@ -636,9 +726,9 @@ export function AdminOrders() {
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
                 <p className="text-sm text-zinc-400">Filtro rápido</p>
-                <h3 className="text-xl font-bold text-white">Busque por código do pedido</h3>
+                <h3 className="text-xl font-bold text-white">Busque pedido ou entregador</h3>
                 <p className="mt-1 text-sm text-zinc-500">
-                  Encontre pedidos com mais rapidez no dia a dia.
+                  Procure por código, cliente, telefone ou nome do entregador.
                 </p>
               </div>
 
@@ -647,7 +737,7 @@ export function AdminOrders() {
                   <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                   <Input
                     type="text"
-                    placeholder="Ex.: #1024"
+                    placeholder="Ex.: #1024 ou João"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="h-12 rounded-full border-white/10 bg-[#111111] pl-10 text-white placeholder:text-zinc-500"
@@ -682,6 +772,21 @@ export function AdminOrders() {
                 {selectedIds.length} pedido(s) selecionado(s).
               </div>
             ) : null}
+
+            <div className="rounded-2xl border border-white/8 bg-[#111111] p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge className="border border-white/10 bg-white/5 text-white">
+                  <Bike className="mr-2 h-3.5 w-3.5" />
+                  {storeDrivers.length} entregador(es)
+                </Badge>
+                <Badge className="border border-zinc-500/30 bg-zinc-500/10 text-zinc-300">
+                  {storeOrders.filter((o) => getOrderType(o) === 'delivery' && !o.deliveryDriverId).length} sem entregador
+                </Badge>
+                <Badge className="border border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
+                  {storeOrders.filter((o) => o.deliveryStatus === 'delivered').length} entregues
+                </Badge>
+              </div>
+            </div>
           </div>
         </Card>
 
@@ -691,7 +796,7 @@ export function AdminOrders() {
             title="Nenhum pedido encontrado"
             description={
               searchTerm
-                ? 'Tente outro código ou limpe a busca.'
+                ? 'Tente outro termo ou limpe a busca.'
                 : viewMode === 'today'
                   ? 'Ainda não existem pedidos de hoje.'
                   : 'Quando os pedidos entrarem, eles aparecerão aqui para você gerenciar.'
@@ -703,6 +808,9 @@ export function AdminOrders() {
               const statusInfo = statusMap[order.status] || statusMap.pending;
               const isSelected = selectedIds.includes(order.id);
               const isDeleting = deletingIds.includes(order.id);
+              const isDelivery = getOrderType(order) === 'delivery';
+              const deliveryInfo = deliveryStatusMap[order.deliveryStatus || 'unassigned'] || deliveryStatusMap.unassigned;
+              const isAssigning = assigningOrderIds.includes(order.id);
 
               return (
                 <Card
@@ -728,6 +836,22 @@ export function AdminOrders() {
                           <Badge className={`border ${statusInfo.badgeClass}`}>
                             {statusInfo.label}
                           </Badge>
+
+                          <Badge
+                            className={`border ${
+                              isDelivery
+                                ? 'border-[#EA1D2C]/30 bg-[#EA1D2C]/10 text-red-300'
+                                : 'border-white/10 bg-white/5 text-zinc-300'
+                            }`}
+                          >
+                            {isDelivery ? 'Entrega' : 'Retirada'}
+                          </Badge>
+
+                          {isDelivery ? (
+                            <Badge className={`border ${deliveryInfo.badgeClass}`}>
+                              {deliveryInfo.label}
+                            </Badge>
+                          ) : null}
                         </div>
 
                         <p className="mt-2 text-sm text-zinc-500">
@@ -753,6 +877,12 @@ export function AdminOrders() {
                             <div>
                               <span className="font-medium text-zinc-300">Pagamento:</span>{' '}
                               {order.paymentMethod}
+                            </div>
+                          ) : null}
+                          {isDelivery ? (
+                            <div>
+                              <span className="font-medium text-zinc-300">Entregador:</span>{' '}
+                              {order.deliveryDriverName || 'Não atribuído'}
                             </div>
                           ) : null}
                         </div>
@@ -804,27 +934,86 @@ export function AdminOrders() {
                     </div>
                   </div>
 
-                  <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_240px]">
-                    <div className="space-y-3 rounded-3xl border border-white/8 bg-[#111111] p-4">
-                      {(order.items || []).length === 0 ? (
-                        <div className="text-sm text-zinc-500">
-                          Nenhum item encontrado neste pedido.
-                        </div>
-                      ) : (
-                        order.items.map((item, index) => (
-                          <div
-                            key={`${order.id}-${index}`}
-                            className="flex items-center justify-between gap-3 text-sm"
-                          >
-                            <span className="text-zinc-300">
-                              {item.quantity}x {item.name}
-                            </span>
-                            <span className="font-semibold text-white">
-                              {formatMoney(Number(item.price || 0) * Number(item.quantity || 0))}
-                            </span>
+                  <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_260px]">
+                    <div className="space-y-4">
+                      <div className="space-y-3 rounded-3xl border border-white/8 bg-[#111111] p-4">
+                        {(order.items || []).length === 0 ? (
+                          <div className="text-sm text-zinc-500">
+                            Nenhum item encontrado neste pedido.
                           </div>
-                        ))
-                      )}
+                        ) : (
+                          order.items.map((item, index) => (
+                            <div
+                              key={`${order.id}-${index}`}
+                              className="flex items-center justify-between gap-3 text-sm"
+                            >
+                              <span className="text-zinc-300">
+                                {item.quantity}x {item.name}
+                              </span>
+                              <span className="font-semibold text-white">
+                                {formatMoney(Number(item.price || 0) * Number(item.quantity || 0))}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {isDelivery ? (
+                        <div className="rounded-3xl border border-[#EA1D2C]/15 bg-[#111111] p-4">
+                          <div className="mb-3 flex items-center gap-2">
+                            <UserRound className="h-4 w-4 text-[#EA1D2C]" />
+                            <p className="text-sm font-semibold text-white">Gestão do entregador</p>
+                          </div>
+
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <div>
+                              <p className="mb-2 text-xs uppercase tracking-[0.20em] text-zinc-500">
+                                Vincular entregador
+                              </p>
+
+                              <Select
+                                value={order.deliveryDriverId || 'unassigned'}
+                                onValueChange={(value) => handleDriverChange(order, value)}
+                                disabled={isAssigning}
+                              >
+                                <SelectTrigger className="h-11 rounded-2xl border-white/10 bg-[#0d0d0d] text-white">
+                                  <SelectValue placeholder="Selecione um entregador" />
+                                </SelectTrigger>
+                                <SelectContent className="border-white/10 bg-[#111111] text-white">
+                                  <SelectItem value="unassigned">Sem entregador</SelectItem>
+                                  {storeDrivers.map((driver) => (
+                                    <SelectItem key={driver.id} value={driver.id}>
+                                      {driver.name} {driver.active ? '' : '(inativo)'}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="rounded-2xl border border-white/8 bg-[#0d0d0d] p-3 text-sm">
+                              <div className="text-zinc-400">Status da entrega</div>
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <Badge className={`border ${deliveryInfo.badgeClass}`}>
+                                  {deliveryInfo.label}
+                                </Badge>
+                                {order.deliveryDriverName ? (
+                                  <Badge className="border border-white/10 bg-white/5 text-zinc-200">
+                                    <Bike className="mr-2 h-3.5 w-3.5" />
+                                    {order.deliveryDriverName}
+                                  </Badge>
+                                ) : null}
+                              </div>
+
+                              {order.deliveryAssignedAt ? (
+                                <div className="mt-3 text-xs text-zinc-500">
+                                  Atribuído em{' '}
+                                  {new Date(order.deliveryAssignedAt).toLocaleString('pt-BR')}
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
 
                     <div className="rounded-3xl border border-white/8 bg-[#111111] p-4">

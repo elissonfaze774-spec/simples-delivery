@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Store as StoreIcon, LogOut } from 'lucide-react';
+import { ArrowLeft, Store as StoreIcon, LogOut, Bike } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/button';
 
@@ -10,6 +10,8 @@ type AdminShellStat = {
   value: string | number;
   helper?: string;
 };
+
+type AdminShellVariant = 'admin' | 'delivery';
 
 type AdminShellProps = {
   title: string;
@@ -21,6 +23,8 @@ type AdminShellProps = {
   children: ReactNode;
   showBackButton?: boolean;
   hideStatsOnMobile?: boolean;
+  variant?: AdminShellVariant;
+  panelLabel?: string;
 };
 
 function shouldShowBackButton(pathname: string) {
@@ -34,6 +38,7 @@ function shouldShowBackButton(pathname: string) {
     '/dashboard',
     '/super-admin',
     '/superadmin',
+    '/driver',
   ];
 
   return !mainRoutes.includes(cleanPath);
@@ -49,6 +54,8 @@ export function AdminShell({
   children,
   showBackButton,
   hideStatsOnMobile = false,
+  variant = 'admin',
+  panelLabel,
 }: AdminShellProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -71,6 +78,9 @@ export function AdminShell({
       navigate('/login', { replace: true });
     }
   };
+
+  const isDeliveryVariant = variant === 'delivery';
+  const badgeLabel = panelLabel || (isDeliveryVariant ? 'PAINEL ENTREGADOR' : 'PAINEL ADMIN');
 
   return (
     <div className="admin-shell min-h-screen bg-[#050505] text-white">
@@ -141,8 +151,12 @@ export function AdminShell({
 
               <div className="min-w-0">
                 <div className="inline-flex items-center gap-2 rounded-full border border-[#f3162d]/35 bg-[#f3162d]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-[#f3162d] sm:text-xs">
-                  <StoreIcon className="h-3.5 w-3.5" />
-                  PAINEL ADMIN
+                  {isDeliveryVariant ? (
+                    <Bike className="h-3.5 w-3.5" />
+                  ) : (
+                    <StoreIcon className="h-3.5 w-3.5" />
+                  )}
+                  {badgeLabel}
                 </div>
 
                 <h1 className="mt-3 text-4xl font-black tracking-tight text-white sm:text-5xl">
@@ -200,7 +214,8 @@ export function AdminShell({
                   (typeof stat.value === 'string' && stat.value.includes('R$')) ||
                   labelLower.includes('receita') ||
                   labelLower.includes('faturamento') ||
-                  labelLower.includes('ticket');
+                  labelLower.includes('ticket') ||
+                  labelLower.includes('ganho');
 
                 return (
                   <div

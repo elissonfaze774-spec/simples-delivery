@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShieldCheck, LogIn, MessageCircle } from 'lucide-react';
+import { ShieldCheck, LogIn, MessageCircle, Bike } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useStore } from '../contexts/StoreContext';
@@ -10,6 +10,12 @@ import { toast } from 'sonner';
 
 function normalizeEmailValue(email: string) {
   return email.trim().toLowerCase();
+}
+
+function getRedirectByRole(role?: 'admin' | 'super-admin' | 'delivery-driver') {
+  if (role === 'super-admin') return '/super-admin';
+  if (role === 'delivery-driver') return '/driver';
+  return '/admin';
 }
 
 export function Login() {
@@ -26,8 +32,7 @@ export function Login() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-
-    navigate(user.role === 'super-admin' ? '/super-admin' : '/admin', { replace: true });
+    navigate(getRedirectByRole(user.role), { replace: true });
   }, [user, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,16 +47,14 @@ export function Login() {
       const appUser = await login(normalizedEmail, password);
 
       if (!appUser) {
-        toast.error('Email, senha ou vínculo da loja estão incorretos.');
+        toast.error('Email, senha ou vínculo de acesso estão incorretos.');
         return;
       }
 
       await reloadStoreData();
 
       toast.success('Login realizado com sucesso!');
-      navigate(appUser.role === 'super-admin' ? '/super-admin' : '/admin', {
-        replace: true,
-      });
+      navigate(getRedirectByRole(appUser.role), { replace: true });
     } catch (error) {
       console.error('Erro no login:', error);
       toast.error('Erro ao fazer login.');
@@ -70,9 +73,11 @@ export function Login() {
         <div className="mx-auto max-w-6xl px-4 py-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-red-400">
-              Acesso administrativo
+              Acesso ao sistema
             </p>
-            <h1 className="text-lg font-black text-white sm:text-xl">Login Admin</h1>
+            <h1 className="text-lg font-black text-white sm:text-xl">
+              Login Simples Delivery
+            </h1>
           </div>
         </div>
       </header>
@@ -82,17 +87,43 @@ export function Login() {
           <div className="max-w-xl">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-red-500/25 bg-red-500/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.32em] text-red-300">
               <ShieldCheck className="h-4 w-4" />
-              Painel admin
+              Painel do sistema
             </div>
 
             <h2 className="text-4xl font-black uppercase leading-tight text-white">
-              Entre para gerenciar sua loja
+              Entre para gerenciar sua operação
             </h2>
 
             <p className="mt-5 max-w-lg text-lg leading-8 text-zinc-400">
-              Acompanhe pedidos, organize produtos, ajuste cupons e mantenha sua
-              operação em dia com o mesmo visual premium do painel do seu SaaS.
+              Admins, super admins e entregadores acessam por aqui com um visual
+              premium no tema avermelhado do seu SaaS.
             </p>
+
+            <div className="mt-8 grid gap-3">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-sm font-semibold text-white">Admin</p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Pedidos, produtos, cupons, configurações e gestão da loja.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-sm font-semibold text-white">Super Admin</p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Controle geral da estrutura do SaaS.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="flex items-center gap-2">
+                  <Bike className="h-4 w-4 text-red-400" />
+                  <p className="text-sm font-semibold text-white">Entregador</p>
+                </div>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Acesso restrito somente à área de entregas.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -105,10 +136,10 @@ export function Login() {
 
               <p className="text-sm text-zinc-400">Bem-vindo de volta</p>
               <h2 className="mt-1 text-3xl font-black text-white">
-                Entrar no painel
+                Entrar no sistema
               </h2>
               <p className="mt-2 text-sm leading-6 text-zinc-500">
-                Use seu email e senha para acessar a área administrativa da sua loja.
+                Use seu email e senha para acessar sua área no Simples Delivery.
               </p>
             </div>
 
@@ -166,9 +197,8 @@ export function Login() {
 
             <div className="mt-6 rounded-2xl border border-red-500/10 bg-red-500/5 p-4">
               <p className="text-xs leading-6 text-zinc-400">
-                Já é cliente? Faça login normalmente. Ainda não tem acesso? Clique
-                em <span className="font-semibold text-white">Obter acesso</span> e fale
-                conosco no WhatsApp.
+                Admins e entregadores acessam com login individual. Se ainda não
+                tem acesso, clique em <span className="font-semibold text-white">Obter acesso</span>.
               </p>
             </div>
           </div>

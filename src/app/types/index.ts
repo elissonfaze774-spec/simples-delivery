@@ -80,6 +80,43 @@ export type OrderStatus =
   | 'received'
   | 'delivered';
 
+export type DeliveryAssignmentStatus =
+  | 'unassigned'
+  | 'assigned'
+  | 'accepted'
+  | 'picked_up'
+  | 'out_for_delivery'
+  | 'delivered'
+  | 'failed'
+  | 'returned'
+  | 'cancelled';
+
+export interface DeliveryDriver {
+  id: string;
+  storeId: string;
+  name: string;
+  email: string;
+  phone: string;
+  password?: string;
+  active: boolean;
+  online?: boolean;
+  avatar?: string;
+  vehicleType?: 'bike' | 'motorcycle' | 'car' | 'other';
+  vehicleLabel?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt?: string;
+  lastActiveAt?: string;
+}
+
+export interface DeliveryStats {
+  totalDeliveries: number;
+  completedDeliveries: number;
+  failedDeliveries: number;
+  totalEarned: number;
+  averageDeliveryMinutes: number;
+}
+
 export interface Order {
   id: string;
   code: string;
@@ -99,6 +136,19 @@ export interface Order {
   deliveryCoordinates?: Coordinates;
   deliveryDistanceKm?: number;
   deliveryFee?: number;
+
+  deliveryDriverId?: string;
+  deliveryDriverName?: string;
+  deliveryAssignedAt?: string;
+  deliveryAcceptedAt?: string;
+  pickedUpAt?: string;
+  outForDeliveryAt?: string;
+  deliveredAt?: string;
+  deliveryFailedAt?: string;
+  deliveryStatus?: DeliveryAssignmentStatus;
+  deliveryNotes?: string;
+  deliveryConfirmationCode?: string;
+  deliveredBy?: string;
 }
 
 export interface Store {
@@ -133,11 +183,14 @@ export interface Plan {
   features: string[];
   maxProducts: number;
   maxOrders: number;
+  maxDeliveryDrivers?: number;
 }
 
 export interface User {
   id: string;
   email: string;
-  role: 'admin' | 'super-admin';
+  role: 'admin' | 'super-admin' | 'delivery-driver';
   storeId?: string;
+  deliveryDriverId?: string;
+  name?: string;
 }

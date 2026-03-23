@@ -10,6 +10,8 @@ import { AdminProducts } from './pages/admin/Products';
 import { AdminSettings } from './pages/admin/Settings';
 import { AdminCoupons } from './pages/admin/Coupons';
 import { SuperAdmin } from './pages/SuperAdmin';
+import DriverLogin from './pages/driver/Login';
+import DriverDashboard from './pages/driver/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export const router = createBrowserRouter([
@@ -20,6 +22,10 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <Login />,
+  },
+  {
+    path: '/driver/login',
+    element: <DriverLogin />,
   },
   {
     path: '/loja',
@@ -74,6 +80,18 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute allowedRoles={['admin']}>
         <AdminCoupons />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/driver',
+    element: <Navigate to="/driver/dashboard" replace />,
+  },
+  {
+    path: '/driver/dashboard',
+    element: (
+      <ProtectedRoute allowedRoles={['delivery-driver']}>
+        <DriverDashboard />
       </ProtectedRoute>
     ),
   },

@@ -12,6 +12,7 @@ import {
   Wallet,
   AlertCircle,
   Moon,
+  Bike,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -64,6 +65,12 @@ function resolveAdminBase(pathname: string) {
   if (pathname.includes('/super-admin')) return '/super-admin';
   if (pathname.includes('/superadmin')) return '/superadmin';
   return '/admin';
+}
+
+function getOrderType(order: any): 'delivery' | 'pickup' {
+  if (order?.deliveryMethod === 'pickup') return 'pickup';
+  if (order?.deliveryMethod === 'delivery') return 'delivery';
+  return order?.customerAddress ? 'delivery' : 'pickup';
 }
 
 function DashboardSection({
@@ -306,8 +313,8 @@ function WelcomeCard({
               isSuspended
                 ? 'border border-amber-500/25 bg-amber-500/10 text-amber-400'
                 : isClosed
-                ? 'border border-blue-500/25 bg-blue-500/10 text-blue-400'
-                : 'border border-emerald-500/25 bg-emerald-500/10 text-emerald-400'
+                  ? 'border border-blue-500/25 bg-blue-500/10 text-blue-400'
+                  : 'border border-emerald-500/25 bg-emerald-500/10 text-emerald-400'
             }`}
           >
             {isSuspended ? 'Loja temporariamente indisponível' : isClosed ? 'Loja fechada' : 'Loja ativa'}
@@ -513,12 +520,93 @@ function MonthlySummarySection({
   );
 }
 
+function DeliveryOperationsSection({
+  driversCount,
+  totalDeliveryOrders,
+  assignedOrders,
+  outForDelivery,
+  deliveredOrders,
+  unassignedOrders,
+  onOpenSettings,
+}: {
+  driversCount: number;
+  totalDeliveryOrders: number;
+  assignedOrders: number;
+  outForDelivery: number;
+  deliveredOrders: number;
+  unassignedOrders: number;
+  onOpenSettings: () => void;
+}) {
+  return (
+    <DashboardSection
+      eyebrow="Operação de entregas"
+      title="Visão rápida dos entregadores"
+      action={
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onOpenSettings}
+          className="h-11 rounded-full border-white/10 bg-[#050505] px-4 text-white hover:bg-[#111111]"
+        >
+          <Bike className="mr-2 h-4 w-4" />
+          Gerenciar
+        </Button>
+      }
+    >
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <SummaryCard
+          icon={Bike}
+          label="Entregadores"
+          value={String(driversCount)}
+          helper="Cadastrados na sua loja"
+        />
+        <SummaryCard
+          icon={ShoppingBag}
+          label="Pedidos com entrega"
+          value={String(totalDeliveryOrders)}
+          helper="Pedidos do tipo delivery"
+        />
+        <SummaryCard
+          icon={TrendingUp}
+          label="Pedidos atribuídos"
+          value={String(assignedOrders)}
+          helper="Já vinculados a um entregador"
+        />
+        <SummaryCard
+          icon={Bike}
+          label="Em rota"
+          value={String(outForDelivery)}
+          helper="Saiu para entrega"
+        />
+        <SummaryCard
+          icon={Wallet}
+          label="Entregues"
+          value={String(deliveredOrders)}
+          helper="Entregas concluídas"
+        />
+        <SummaryCard
+          icon={AlertCircle}
+          label="Sem entregador"
+          value={String(unassignedOrders)}
+          helper="Pedidos aguardando vínculo"
+        />
+      </div>
+    </DashboardSection>
+  );
+}
+
 export function AdminDashboardPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { stores, getStoreByAdminEmail, getStoreProducts, getStoreCategories, getStoreCoupons } =
-    useStore();
+  const {
+    stores,
+    getStoreByAdminEmail,
+    getStoreProducts,
+    getStoreCategories,
+    getStoreCoupons,
+    getStoreDeliveryDrivers,
+  } = useStore();
   const { orders = [] } = useOrders();
   const [isMobile, setIsMobile] = useState(false);
 
@@ -563,6 +651,11 @@ export function AdminDashboardPage() {
     return getStoreCoupons(store.id) ?? [];
   }, [getStoreCoupons, store?.id]);
 
+  const storeDrivers = useMemo(() => {
+    if (!store?.id || typeof getStoreDeliveryDrivers !== 'function') return [];
+    return getStoreDeliveryDrivers(store.id) ?? [];
+  }, [getStoreDeliveryDrivers, store?.id]);
+
   const storeOrders = useMemo(() => {
     if (!store?.id) return [];
     return (orders ?? []).filter((order: any) => order.storeId === store.id);
@@ -606,6 +699,31 @@ export function AdminDashboardPage() {
       count: monthOrders.length,
       total,
       ticketAverage: monthOrders.length > 0 ? total / monthOrders.length : 0,
+    };
+  }, [activeOrders]);
+
+  const deliveryMetrics = useMemo(() => {
+    const deliveryOrders = activeOrders.filter((order: any) => getOrderType(order) === 'delivery');
+
+    const assignedOrders = deliveryOrders.filter((order: any) => !!order.deliveryDriverId).length;
+    const outForDelivery = deliveryOrders.filter(
+      (order: any) =>
+        order.deliveryStatus === 'out_for_delivery' || order.status === 'delivering'
+    ).length;
+    const deliveredOrders = deliveryOrders.filter(
+      (order: any) =>
+        order.deliveryStatus === 'delivered' || order.status === 'completed'
+    ).length;
+    const unassignedOrders = deliveryOrders.filter(
+      (order: any) => !order.deliveryDriverId || order.deliveryStatus === 'unassigned'
+    ).length;
+
+    return {
+      totalDeliveryOrders: deliveryOrders.length,
+      assignedOrders,
+      outForDelivery,
+      deliveredOrders,
+      unassignedOrders,
     };
   }, [activeOrders]);
 
@@ -664,12 +782,6 @@ export function AdminDashboardPage() {
         onClick: goToProducts,
       },
       {
-        label: 'Categorias',
-        description: 'Gerenciar categorias da loja',
-        icon: ShoppingBag,
-        onClick: goToProducts,
-      },
-      {
         label: 'Pedidos',
         description: 'Acompanhar pedidos da loja',
         icon: TrendingUp,
@@ -681,12 +793,24 @@ export function AdminDashboardPage() {
         icon: Tag,
         onClick: () => goTo('coupons'),
       },
+      {
+        label: 'Entregadores',
+        description: 'Gerenciar equipe de entrega',
+        icon: Bike,
+        onClick: goToSettings,
+      },
     ],
     [adminBase]
   );
 
   const visibleProducts = useMemo(() => {
-    return storeProducts.filter((product: any) => product?.isActive !== false);
+    return storeProducts.filter(
+      (product: any) =>
+        product?.available !== false &&
+        product?.isAvailable !== false &&
+        product?.is_available !== false &&
+        product?.isActive !== false
+    );
   }, [storeProducts]);
 
   const topStats = [
@@ -696,14 +820,14 @@ export function AdminDashboardPage() {
       helper: 'Catálogo cadastrado',
     },
     {
-      label: 'Categorias',
-      value: storeCategories.length,
-      helper: 'Organização do cardápio',
-    },
-    {
       label: 'Pedidos',
       value: monthMetrics.count,
-      helper: 'Movimento total',
+      helper: 'Movimento do mês',
+    },
+    {
+      label: 'Entregadores',
+      value: storeDrivers.length,
+      helper: 'Equipe cadastrada',
     },
     {
       label: 'Receita',
@@ -778,6 +902,18 @@ export function AdminDashboardPage() {
           </div>
 
           <div className="lg:col-span-12">
+            <DeliveryOperationsSection
+              driversCount={storeDrivers.length}
+              totalDeliveryOrders={deliveryMetrics.totalDeliveryOrders}
+              assignedOrders={deliveryMetrics.assignedOrders}
+              outForDelivery={deliveryMetrics.outForDelivery}
+              deliveredOrders={deliveryMetrics.deliveredOrders}
+              unassignedOrders={deliveryMetrics.unassignedOrders}
+              onOpenSettings={goToSettings}
+            />
+          </div>
+
+          <div className="lg:col-span-12">
             <MonthlySummarySection
               monthTotal={monthMetrics.total}
               monthCount={monthMetrics.count}
@@ -841,6 +977,16 @@ export function AdminDashboardPage() {
             monthCount={monthMetrics.count}
             visibleProducts={visibleProducts.length}
             storeCoupons={storeCoupons.length}
+          />
+
+          <DeliveryOperationsSection
+            driversCount={storeDrivers.length}
+            totalDeliveryOrders={deliveryMetrics.totalDeliveryOrders}
+            assignedOrders={deliveryMetrics.assignedOrders}
+            outForDelivery={deliveryMetrics.outForDelivery}
+            deliveredOrders={deliveryMetrics.deliveredOrders}
+            unassignedOrders={deliveryMetrics.unassignedOrders}
+            onOpenSettings={goToSettings}
           />
 
           <MonthlySummarySection
