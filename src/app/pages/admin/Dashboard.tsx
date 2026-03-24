@@ -67,12 +67,6 @@ function resolveAdminBase(pathname: string) {
   return '/admin';
 }
 
-function getOrderType(order: any): 'delivery' | 'pickup' {
-  if (order?.deliveryMethod === 'pickup') return 'pickup';
-  if (order?.deliveryMethod === 'delivery') return 'delivery';
-  return order?.customerAddress ? 'delivery' : 'pickup';
-}
-
 function DashboardSection({
   eyebrow,
   title,
@@ -520,81 +514,6 @@ function MonthlySummarySection({
   );
 }
 
-function DeliveryOperationsSection({
-  driversCount,
-  totalDeliveryOrders,
-  assignedOrders,
-  outForDelivery,
-  deliveredOrders,
-  unassignedOrders,
-  onOpenSettings,
-}: {
-  driversCount: number;
-  totalDeliveryOrders: number;
-  assignedOrders: number;
-  outForDelivery: number;
-  deliveredOrders: number;
-  unassignedOrders: number;
-  onOpenSettings: () => void;
-}) {
-  return (
-    <DashboardSection
-      eyebrow="Operação de entregas"
-      title="Visão rápida dos entregadores"
-      action={
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onOpenSettings}
-          className="h-11 rounded-full border-white/10 bg-[#050505] px-4 text-white hover:bg-[#111111]"
-        >
-          <Bike className="mr-2 h-4 w-4" />
-          Gerenciar
-        </Button>
-      }
-    >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <SummaryCard
-          icon={Bike}
-          label="Entregadores"
-          value={String(driversCount)}
-          helper="Cadastrados na sua loja"
-        />
-        <SummaryCard
-          icon={ShoppingBag}
-          label="Pedidos com entrega"
-          value={String(totalDeliveryOrders)}
-          helper="Pedidos do tipo delivery"
-        />
-        <SummaryCard
-          icon={TrendingUp}
-          label="Pedidos atribuídos"
-          value={String(assignedOrders)}
-          helper="Já vinculados a um entregador"
-        />
-        <SummaryCard
-          icon={Bike}
-          label="Em rota"
-          value={String(outForDelivery)}
-          helper="Saiu para entrega"
-        />
-        <SummaryCard
-          icon={Wallet}
-          label="Entregues"
-          value={String(deliveredOrders)}
-          helper="Entregas concluídas"
-        />
-        <SummaryCard
-          icon={AlertCircle}
-          label="Sem entregador"
-          value={String(unassignedOrders)}
-          helper="Pedidos aguardando vínculo"
-        />
-      </div>
-    </DashboardSection>
-  );
-}
-
 export function AdminDashboardPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -702,31 +621,6 @@ export function AdminDashboardPage() {
     };
   }, [activeOrders]);
 
-  const deliveryMetrics = useMemo(() => {
-    const deliveryOrders = activeOrders.filter((order: any) => getOrderType(order) === 'delivery');
-
-    const assignedOrders = deliveryOrders.filter((order: any) => !!order.deliveryDriverId).length;
-    const outForDelivery = deliveryOrders.filter(
-      (order: any) =>
-        order.deliveryStatus === 'out_for_delivery' || order.status === 'delivering'
-    ).length;
-    const deliveredOrders = deliveryOrders.filter(
-      (order: any) =>
-        order.deliveryStatus === 'delivered' || order.status === 'completed'
-    ).length;
-    const unassignedOrders = deliveryOrders.filter(
-      (order: any) => !order.deliveryDriverId || order.deliveryStatus === 'unassigned'
-    ).length;
-
-    return {
-      totalDeliveryOrders: deliveryOrders.length,
-      assignedOrders,
-      outForDelivery,
-      deliveredOrders,
-      unassignedOrders,
-    };
-  }, [activeOrders]);
-
   const dailyChartData = useMemo<DailyChartItem[]>(() => {
     const today = new Date();
 
@@ -773,6 +667,10 @@ export function AdminDashboardPage() {
     navigate(`${adminBase}/settings`);
   };
 
+  const goToDrivers = () => {
+    navigate(`${adminBase}/drivers`);
+  };
+
   const shortcuts = useMemo<ShortcutItem[]>(
     () => [
       {
@@ -797,7 +695,7 @@ export function AdminDashboardPage() {
         label: 'Entregadores',
         description: 'Gerenciar equipe de entrega',
         icon: Bike,
-        onClick: goToSettings,
+        onClick: goToDrivers,
       },
     ],
     [adminBase]
@@ -902,18 +800,6 @@ export function AdminDashboardPage() {
           </div>
 
           <div className="lg:col-span-12">
-            <DeliveryOperationsSection
-              driversCount={storeDrivers.length}
-              totalDeliveryOrders={deliveryMetrics.totalDeliveryOrders}
-              assignedOrders={deliveryMetrics.assignedOrders}
-              outForDelivery={deliveryMetrics.outForDelivery}
-              deliveredOrders={deliveryMetrics.deliveredOrders}
-              unassignedOrders={deliveryMetrics.unassignedOrders}
-              onOpenSettings={goToSettings}
-            />
-          </div>
-
-          <div className="lg:col-span-12">
             <MonthlySummarySection
               monthTotal={monthMetrics.total}
               monthCount={monthMetrics.count}
@@ -977,16 +863,6 @@ export function AdminDashboardPage() {
             monthCount={monthMetrics.count}
             visibleProducts={visibleProducts.length}
             storeCoupons={storeCoupons.length}
-          />
-
-          <DeliveryOperationsSection
-            driversCount={storeDrivers.length}
-            totalDeliveryOrders={deliveryMetrics.totalDeliveryOrders}
-            assignedOrders={deliveryMetrics.assignedOrders}
-            outForDelivery={deliveryMetrics.outForDelivery}
-            deliveredOrders={deliveryMetrics.deliveredOrders}
-            unassignedOrders={deliveryMetrics.unassignedOrders}
-            onOpenSettings={goToSettings}
           />
 
           <MonthlySummarySection

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   Bike,
   Mail,
@@ -54,6 +54,14 @@ function normalizeEmail(value: string) {
   return String(value || '').trim().toLowerCase();
 }
 
+function formatPhone(value: string) {
+  const digits = onlyDigits(value).slice(0, 11);
+
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
+}
+
 function fieldClassName(withIcon = false) {
   return `h-12 rounded-2xl border border-white/10 bg-white/[0.03] text-white placeholder:text-white/35 ${
     withIcon ? 'pl-10' : ''
@@ -100,9 +108,7 @@ export function AdminDrivers() {
       .maybeSingle();
 
     if (storeByOwner?.id) {
-      setStoreName(
-        String((storeByOwner as any).store_name || (storeByOwner as any).name || 'Minha loja')
-      );
+      setStoreName(String((storeByOwner as any).store_name || (storeByOwner as any).name || 'Minha loja'));
       return String(storeByOwner.id);
     }
 
@@ -114,9 +120,7 @@ export function AdminDrivers() {
         .maybeSingle();
 
       if (storeByEmail?.id) {
-        setStoreName(
-          String((storeByEmail as any).store_name || (storeByEmail as any).name || 'Minha loja')
-        );
+        setStoreName(String((storeByEmail as any).store_name || (storeByEmail as any).name || 'Minha loja'));
         return String(storeByEmail.id);
       }
     }
@@ -158,6 +162,16 @@ export function AdminDrivers() {
   }
 
   useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/login', { replace: true });
+      return;
+    }
+
+    if (!authLoading && user?.role !== 'admin') {
+      navigate('/login', { replace: true });
+      return;
+    }
+
     if (!authLoading && user?.role === 'admin') {
       loadDrivers();
     }
@@ -178,14 +192,14 @@ export function AdminDrivers() {
     setForm({
       name: String(driver.name || ''),
       email: String(driver.email || ''),
-      phone: String(driver.phone || ''),
+      phone: formatPhone(String(driver.phone || '')),
       active: driver.active !== false,
     });
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     const name = String(form.name || '').trim();
@@ -297,7 +311,6 @@ export function AdminDrivers() {
   }
 
   if (!user || user.role !== 'admin') {
-    navigate('/login');
     return null;
   }
 
@@ -339,10 +352,7 @@ export function AdminDrivers() {
                 {editingId ? 'Editar entregador' : 'Novo entregador'}
               </h2>
               <p className="mt-2 text-sm text-white/65">
-                Essa tela salva os dados do entregador na tabela <strong>drivers</strong>.
-              </p>
-              <p className="mt-2 text-xs text-amber-300">
-                Login do entregador no Auth ainda precisa de Edge Function ou criação manual no Supabase.
+                Cadastre os entregadores da sua loja em uma área separada do dashboard.
               </p>
             </div>
 
@@ -413,7 +423,12 @@ export function AdminDrivers() {
                 <Input
                   id="driver-phone"
                   value={form.phone}
-                  onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      phone: formatPhone(e.target.value),
+                    }))
+                  }
                   placeholder="(00) 00000-0000"
                   className={fieldClassName(true)}
                 />
@@ -609,3 +624,5 @@ export function AdminDrivers() {
     </AdminShell>
   );
 }
+
+export default AdminDrivers;

@@ -44,6 +44,7 @@ export const router = createBrowserRouter([
     path: '/orders',
     element: <Orders />,
   },
+
   {
     path: '/admin',
     element: (
@@ -92,6 +93,7 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
+
   {
     path: '/driver',
     element: <Navigate to="/driver/dashboard" replace />,
@@ -104,6 +106,7 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
+
   {
     path: '/super-admin',
     element: (
@@ -112,6 +115,7 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
+
   {
     path: '*',
     element: <Navigate to="/login" replace />,

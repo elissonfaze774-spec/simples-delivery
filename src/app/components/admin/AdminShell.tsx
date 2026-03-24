@@ -39,6 +39,7 @@ function shouldShowBackButton(pathname: string) {
     '/super-admin',
     '/superadmin',
     '/driver',
+    '/driver/dashboard',
   ];
 
   return !mainRoutes.includes(cleanPath);
