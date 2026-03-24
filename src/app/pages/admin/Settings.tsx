@@ -12,12 +12,7 @@ import {
   MapPin,
   Search,
   Info,
-  Bike,
   Store,
-  Plus,
-  Pencil,
-  Trash2,
-  UserRound,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
@@ -31,7 +26,6 @@ import { toast } from 'sonner';
 import { QRCodeSVG } from 'qrcode.react';
 import { AdminShell } from '../../components/admin/AdminShell';
 import { getStoreUrl } from '../../lib/urls';
-import type { DeliveryDriver } from '../../types';
 
 function formatMoney(value: number) {
   return Number(value || 0).toLocaleString('pt-BR', {
@@ -77,47 +71,6 @@ function fieldClassName(withIcon = false) {
 const sectionCardClass =
   'rounded-[28px] border border-[#3a0d12] bg-[linear-gradient(180deg,rgba(12,12,14,0.98)_0%,rgba(18,10,12,0.98)_100%)] p-6 shadow-[0_24px_70px_-45px_rgba(0,0,0,0.8)]';
 
-type DriverVehicleType = '' | 'bike' | 'motorcycle' | 'car' | 'other';
-
-type DriverFormState = {
-  name: string;
-  email: string;
-  phone: string;
-  vehicleType: DriverVehicleType;
-  vehicleLabel: string;
-  notes: string;
-  active: boolean;
-};
-
-const initialDriverForm: DriverFormState = {
-  name: '',
-  email: '',
-  phone: '',
-  vehicleType: '',
-  vehicleLabel: '',
-  notes: '',
-  active: true,
-};
-
-function normalizeDriverEmail(value: string) {
-  return String(value || '').trim().toLowerCase();
-}
-
-function vehicleTypeLabel(value?: string) {
-  switch (value) {
-    case 'bike':
-      return 'Bicicleta';
-    case 'motorcycle':
-      return 'Moto';
-    case 'car':
-      return 'Carro';
-    case 'other':
-      return 'Outro';
-    default:
-      return 'Não informado';
-  }
-}
-
 export function AdminSettings() {
   const navigate = useNavigate();
   const { user, authLoading } = useAuth();
@@ -127,12 +80,7 @@ export function AdminSettings() {
     plans,
     getStore,
     getStoreByAdminEmail,
-    getStoreDeliveryDrivers,
     updateStore,
-    addDeliveryDriver,
-    updateDeliveryDriver,
-    deleteDeliveryDriver,
-    toggleDeliveryDriverActive,
   } = useStore();
 
   const [copiedLink, setCopiedLink] = useState(false);
@@ -140,12 +88,6 @@ export function AdminSettings() {
   const [authChecked, setAuthChecked] = useState(false);
   const [selectedThemeColor, setSelectedThemeColor] = useState('#EA1D2C');
   const [cepLoading, setCepLoading] = useState(false);
-
-  const [driverForm, setDriverForm] = useState<DriverFormState>(initialDriverForm);
-  const [editingDriverId, setEditingDriverId] = useState<string | null>(null);
-  const [driverSaving, setDriverSaving] = useState(false);
-  const [driverDeletingIds, setDriverDeletingIds] = useState<string[]>([]);
-  const [driverTogglingIds, setDriverTogglingIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -184,11 +126,6 @@ export function AdminSettings() {
     setSelectedThemeColor(currentThemeColor);
   }, [currentThemeColor]);
 
-  const storeDrivers = useMemo(
-    () => (resolvedStore ? getStoreDeliveryDrivers(resolvedStore.id) : []),
-    [resolvedStore, getStoreDeliveryDrivers]
-  );
-
   const currentPlan =
     String((resolvedStore as any)?.plan || (resolvedStore as any)?.plan_id || 'iniciante')
       .trim()
@@ -198,140 +135,6 @@ export function AdminSettings() {
     () => plans.find((plan) => String(plan.id) === currentPlan),
     [plans, currentPlan]
   );
-
-  const maxDeliveryDrivers = Number(currentPlanConfig?.maxDeliveryDrivers ?? 0);
-  const driversLocked = maxDeliveryDrivers === 0;
-  const driversUnlimited = maxDeliveryDrivers < 0;
-  const driversLimitReached = !driversUnlimited && storeDrivers.length >= maxDeliveryDrivers;
-
-  const resetDriverForm = () => {
-    setDriverForm(initialDriverForm);
-    setEditingDriverId(null);
-  };
-
-  const handleEditDriver = (driver: DeliveryDriver) => {
-    setEditingDriverId(driver.id);
-    setDriverForm({
-      name: String(driver.name || ''),
-      email: String(driver.email || ''),
-      phone: String(driver.phone || ''),
-      vehicleType: (driver.vehicleType as DriverVehicleType) || '',
-      vehicleLabel: String(driver.vehicleLabel || ''),
-      notes: String(driver.notes || ''),
-      active: Boolean(driver.active),
-    });
-
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-  };
-
-  const handleDriverSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!resolvedStore || driverSaving) return;
-
-    const name = String(driverForm.name || '').trim();
-    const email = normalizeDriverEmail(driverForm.email);
-    const phone = normalizeDigits(driverForm.phone);
-
-    if (driversLocked && !editingDriverId) {
-      toast.error('Seu plano atual não libera entregadores. Faça upgrade para Pro ou Premium.');
-      return;
-    }
-
-    if (!editingDriverId && driversLimitReached) {
-      toast.error(
-        `Seu plano permite até ${maxDeliveryDrivers} entregador(es). Faça upgrade para liberar mais.`
-      );
-      return;
-    }
-
-    if (!name) {
-      toast.error('Informe o nome do entregador.');
-      return;
-    }
-
-    if (!email) {
-      toast.error('Informe o email do entregador.');
-      return;
-    }
-
-    if (!phone) {
-      toast.error('Informe o telefone do entregador.');
-      return;
-    }
-
-    try {
-      setDriverSaving(true);
-
-      if (editingDriverId) {
-        await updateDeliveryDriver(editingDriverId, {
-          name,
-          email,
-          phone,
-          active: driverForm.active,
-          vehicleType: driverForm.vehicleType || undefined,
-          vehicleLabel: String(driverForm.vehicleLabel || '').trim() || undefined,
-          notes: String(driverForm.notes || '').trim() || undefined,
-        });
-
-        toast.success('Entregador atualizado com sucesso.');
-      } else {
-        await addDeliveryDriver({
-          storeId: resolvedStore.id,
-          name,
-          email,
-          phone,
-          active: driverForm.active,
-          online: false,
-          avatar: '',
-          vehicleType: driverForm.vehicleType || undefined,
-          vehicleLabel: String(driverForm.vehicleLabel || '').trim() || undefined,
-          notes: String(driverForm.notes || '').trim() || undefined,
-          lastActiveAt: undefined,
-        });
-
-        toast.success('Entregador criado com sucesso.');
-      }
-
-      resetDriverForm();
-    } catch (error: any) {
-      console.error('Erro ao salvar entregador:', error);
-      toast.error(error?.message || 'Não foi possível salvar o entregador.');
-    } finally {
-      setDriverSaving(false);
-    }
-  };
-
-  const handleDeleteDriver = async (driver: DeliveryDriver) => {
-    if (!window.confirm(`Deseja realmente excluir ${driver.name}?`)) return;
-
-    try {
-      setDriverDeletingIds((prev) => [...prev, driver.id]);
-      await deleteDeliveryDriver(driver.id);
-      toast.success('Entregador excluído com sucesso.');
-
-      if (editingDriverId === driver.id) {
-        resetDriverForm();
-      }
-    } catch (error: any) {
-      console.error('Erro ao excluir entregador:', error);
-      toast.error(error?.message || 'Não foi possível excluir o entregador.');
-    } finally {
-      setDriverDeletingIds((prev) => prev.filter((id) => id !== driver.id));
-    }
-  };
-
-  const handleToggleDriver = async (driver: DeliveryDriver) => {
-    try {
-      setDriverTogglingIds((prev) => [...prev, driver.id]);
-      await toggleDeliveryDriverActive(driver.id);
-      toast.success(driver.active ? 'Entregador desativado.' : 'Entregador ativado.');
-    } catch (error: any) {
-      console.error('Erro ao alterar status do entregador:', error);
-      toast.error(error?.message || 'Não foi possível alterar o status do entregador.');
-    } finally {
-      setDriverTogglingIds((prev) => prev.filter((id) => id !== driver.id));
-    }
-  };
 
   if (authLoading || !authChecked || (!isLoaded && stores.length === 0)) {
     return <div className="p-6 text-white">Carregando configurações...</div>;
@@ -642,7 +445,7 @@ export function AdminSettings() {
   return (
     <AdminShell
       title="Configurações"
-      subtitle="Ajuste sua loja, endereço, horários, retirada, entrega e entregadores"
+      subtitle="Ajuste sua loja, endereço, horários, retirada e entrega"
       storeName={resolvedStore.name}
       onBack={() => navigate('/admin')}
       stats={[
@@ -653,7 +456,7 @@ export function AdminSettings() {
         },
         {
           label: 'Plano',
-          value: currentPlan,
+          value: currentPlanConfig?.name || currentPlan,
           helper: 'Plano atual contratado',
         },
         {
@@ -668,9 +471,9 @@ export function AdminSettings() {
               : 'Taxa fixa da loja',
         },
         {
-          label: 'Entregadores',
-          value: storeDrivers.length,
-          helper: driversUnlimited ? 'Sem limite' : `Limite do plano: ${maxDeliveryDrivers}`,
+          label: 'Retirada',
+          value: currentAllowPickup ? 'Ativa' : 'Desativada',
+          helper: 'Retirada no local',
         },
       ]}
     >
@@ -790,7 +593,7 @@ export function AdminSettings() {
 
                 <div className="md:col-span-2 rounded-[24px] border border-[#3a0d12] bg-[#12090b] p-4">
                   <div className="mb-3 flex items-center gap-2">
-                    <Bike className="h-4 w-4 text-[#EA1D2C]" />
+                    <Store className="h-4 w-4 text-[#EA1D2C]" />
                     <p className="text-sm font-semibold text-white">Configuração da entrega</p>
                   </div>
 
@@ -1263,373 +1066,6 @@ export function AdminSettings() {
             </form>
           </Card>
         </div>
-
-        <Card className={sectionCardClass}>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-[0.25em] text-[#ff7b85]">Entregadores</p>
-              <h2 className="mt-3 text-2xl font-bold text-white">Gestão de entregadores</h2>
-              <p className="mt-2 text-sm text-white/65">
-                Cadastre, edite, ative ou desative entregadores da sua loja. Tudo salvo no Supabase.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/75">
-              {driversUnlimited
-                ? 'Plano com entregadores ilimitados'
-                : `Plano atual: até ${maxDeliveryDrivers} entregador(es)`}
-            </div>
-          </div>
-
-          {driversLocked ? (
-            <div className="mt-6 rounded-[24px] border border-[#EA1D2C]/20 bg-[#EA1D2C]/10 p-5">
-              <div className="flex items-center gap-3">
-                <Bike className="h-5 w-5 text-[#ff7b85]" />
-                <div>
-                  <p className="font-semibold text-white">Entregadores bloqueados no seu plano</p>
-                  <p className="mt-1 text-sm text-white/70">
-                    Faça upgrade para <span className="font-semibold text-white">Pro</span> ou{' '}
-                    <span className="font-semibold text-white">Premium</span> para liberar esse módulo.
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="mt-6 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-            <div className="space-y-4">
-              {storeDrivers.length === 0 ? (
-                <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-6 text-center">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#EA1D2C]/10 text-[#EA1D2C]">
-                    <Bike className="h-6 w-6" />
-                  </div>
-                  <h3 className="mt-4 text-lg font-bold text-white">Nenhum entregador cadastrado</h3>
-                  <p className="mt-2 text-sm text-white/55">
-                    Cadastre seu primeiro entregador para começar a vincular pedidos.
-                  </p>
-                </div>
-              ) : (
-                storeDrivers.map((driver) => {
-                  const isDeleting = driverDeletingIds.includes(driver.id);
-                  const isToggling = driverTogglingIds.includes(driver.id);
-
-                  return (
-                    <div
-                      key={driver.id}
-                      className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5"
-                    >
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#EA1D2C]/10 text-[#EA1D2C]">
-                              <UserRound className="h-5 w-5" />
-                            </div>
-
-                            <div>
-                              <h3 className="text-lg font-bold text-white">{driver.name}</h3>
-                              <div className="mt-1 flex flex-wrap gap-2">
-                                <span
-                                  className={`rounded-full border px-3 py-1 text-xs ${
-                                    driver.active
-                                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-                                      : 'border-rose-500/30 bg-rose-500/10 text-rose-300'
-                                  }`}
-                                >
-                                  {driver.active ? 'Ativo' : 'Inativo'}
-                                </span>
-
-                                <span
-                                  className={`rounded-full border px-3 py-1 text-xs ${
-                                    driver.online
-                                      ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300'
-                                      : 'border-zinc-500/30 bg-zinc-500/10 text-zinc-300'
-                                  }`}
-                                >
-                                  {driver.online ? 'Online' : 'Offline'}
-                                </span>
-
-                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/70">
-                                  {vehicleTypeLabel(driver.vehicleType)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="mt-4 grid gap-2 text-sm text-white/65 md:grid-cols-2">
-                            <div>
-                              <span className="font-medium text-white/85">Email:</span> {driver.email || '—'}
-                            </div>
-                            <div>
-                              <span className="font-medium text-white/85">Telefone:</span>{' '}
-                              {driver.phone || '—'}
-                            </div>
-                            <div>
-                              <span className="font-medium text-white/85">Veículo:</span>{' '}
-                              {driver.vehicleLabel || '—'}
-                            </div>
-                            <div>
-                              <span className="font-medium text-white/85">Última atividade:</span>{' '}
-                              {driver.lastActiveAt
-                                ? new Date(driver.lastActiveAt).toLocaleString('pt-BR')
-                                : '—'}
-                            </div>
-                          </div>
-
-                          {driver.notes ? (
-                            <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-sm text-white/65">
-                              <span className="font-medium text-white/85">Observações:</span> {driver.notes}
-                            </div>
-                          ) : null}
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => handleEditDriver(driver)}
-                            className="rounded-full border-white/10 bg-white/[0.04] text-white hover:bg-white/10"
-                          >
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Editar
-                          </Button>
-
-                          <Button
-                            type="button"
-                            variant="outline"
-                            disabled={isToggling}
-                            onClick={() => handleToggleDriver(driver)}
-                            className="rounded-full border-white/10 bg-white/[0.04] text-white hover:bg-white/10"
-                          >
-                            <Power className="mr-2 h-4 w-4" />
-                            {isToggling
-                              ? 'Alterando...'
-                              : driver.active
-                                ? 'Desativar'
-                                : 'Ativar'}
-                          </Button>
-
-                          <Button
-                            type="button"
-                            variant="outline"
-                            disabled={isDeleting}
-                            onClick={() => handleDeleteDriver(driver)}
-                            className="rounded-full border-rose-500/20 bg-rose-500/10 text-rose-300 hover:bg-rose-500/15"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {isDeleting ? 'Excluindo...' : 'Excluir'}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm text-white/55">
-                    {editingDriverId ? 'Editar entregador' : 'Novo entregador'}
-                  </p>
-                  <h3 className="text-xl font-bold text-white">
-                    {editingDriverId ? 'Atualizar cadastro' : 'Cadastrar entregador'}
-                  </h3>
-                </div>
-
-                {editingDriverId ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={resetDriverForm}
-                    className="rounded-full border-white/10 bg-white/[0.04] text-white hover:bg-white/10"
-                  >
-                    Cancelar
-                  </Button>
-                ) : null}
-              </div>
-
-              <form onSubmit={handleDriverSubmit} className="mt-5 space-y-4">
-                <div>
-                  <Label htmlFor="driverName" className="text-white/85">
-                    Nome
-                  </Label>
-                  <Input
-                    id="driverName"
-                    value={driverForm.name}
-                    onChange={(e) =>
-                      setDriverForm((prev) => ({ ...prev, name: e.target.value }))
-                    }
-                    placeholder="Nome do entregador"
-                    className={`mt-2 ${fieldClassName()}`}
-                    disabled={driverSaving || driversLocked}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="driverEmail" className="text-white/85">
-                    Email
-                  </Label>
-                  <Input
-                    id="driverEmail"
-                    type="email"
-                    value={driverForm.email}
-                    onChange={(e) =>
-                      setDriverForm((prev) => ({ ...prev, email: e.target.value }))
-                    }
-                    placeholder="entregador@email.com"
-                    className={`mt-2 ${fieldClassName()}`}
-                    disabled={driverSaving || driversLocked}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="driverPhone" className="text-white/85">
-                    Telefone
-                  </Label>
-                  <Input
-                    id="driverPhone"
-                    value={driverForm.phone}
-                    onChange={(e) =>
-                      setDriverForm((prev) => ({ ...prev, phone: e.target.value }))
-                    }
-                    placeholder="(00) 00000-0000"
-                    className={`mt-2 ${fieldClassName()}`}
-                    disabled={driverSaving || driversLocked}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="driverVehicleType" className="text-white/85">
-                    Tipo de veículo
-                  </Label>
-                  <select
-                    id="driverVehicleType"
-                    value={driverForm.vehicleType}
-                    onChange={(e) =>
-                      setDriverForm((prev) => ({
-                        ...prev,
-                        vehicleType: e.target.value as DriverVehicleType,
-                      }))
-                    }
-                    className={`mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.03] px-3 text-white ${fieldClassName()}`}
-                    disabled={driverSaving || driversLocked}
-                  >
-                    <option value="" className="bg-[#111111]">
-                      Selecione
-                    </option>
-                    <option value="bike" className="bg-[#111111]">
-                      Bicicleta
-                    </option>
-                    <option value="motorcycle" className="bg-[#111111]">
-                      Moto
-                    </option>
-                    <option value="car" className="bg-[#111111]">
-                      Carro
-                    </option>
-                    <option value="other" className="bg-[#111111]">
-                      Outro
-                    </option>
-                  </select>
-                </div>
-
-                <div>
-                  <Label htmlFor="driverVehicleLabel" className="text-white/85">
-                    Descrição do veículo
-                  </Label>
-                  <Input
-                    id="driverVehicleLabel"
-                    value={driverForm.vehicleLabel}
-                    onChange={(e) =>
-                      setDriverForm((prev) => ({ ...prev, vehicleLabel: e.target.value }))
-                    }
-                    placeholder="Ex.: Honda Fan preta"
-                    className={`mt-2 ${fieldClassName()}`}
-                    disabled={driverSaving || driversLocked}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="driverNotes" className="text-white/85">
-                    Observações
-                  </Label>
-                  <textarea
-                    id="driverNotes"
-                    value={driverForm.notes}
-                    onChange={(e) =>
-                      setDriverForm((prev) => ({ ...prev, notes: e.target.value }))
-                    }
-                    placeholder="Informações internas do entregador"
-                    rows={4}
-                    disabled={driverSaving || driversLocked}
-                    className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-white/35 outline-none"
-                  />
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <p className="mb-3 text-sm font-medium text-white">Status do entregador</p>
-
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white">
-                      <input
-                        type="radio"
-                        checked={driverForm.active === true}
-                        onChange={() =>
-                          setDriverForm((prev) => ({ ...prev, active: true }))
-                        }
-                        className="accent-[#EA1D2C]"
-                        disabled={driverSaving || driversLocked}
-                      />
-                      <span className="text-sm">Ativo</span>
-                    </label>
-
-                    <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white">
-                      <input
-                        type="radio"
-                        checked={driverForm.active === false}
-                        onChange={() =>
-                          setDriverForm((prev) => ({ ...prev, active: false }))
-                        }
-                        className="accent-[#EA1D2C]"
-                        disabled={driverSaving || driversLocked}
-                      />
-                      <span className="text-sm">Inativo</span>
-                    </label>
-                  </div>
-                </div>
-
-                {!driversUnlimited ? (
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-white/65">
-                    {storeDrivers.length} de {maxDeliveryDrivers} entregador(es) em uso no plano.
-                  </div>
-                ) : null}
-
-                <Button
-                  type="submit"
-                  disabled={
-                    driverSaving ||
-                    driversLocked ||
-                    (!editingDriverId && driversLimitReached)
-                  }
-                  className="h-12 w-full rounded-2xl bg-[#EA1D2C] text-white hover:bg-[#d31625]"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  {driverSaving
-                    ? editingDriverId
-                      ? 'Atualizando...'
-                      : 'Cadastrando...'
-                    : editingDriverId
-                      ? 'Atualizar entregador'
-                      : 'Cadastrar entregador'}
-                </Button>
-
-                <p className="text-xs text-white/45">
-                  Esse cadastro já fica salvo no Supabase e pronto para ser vinculado aos pedidos.
-                </p>
-              </form>
-            </div>
-          </div>
-        </Card>
       </div>
     </AdminShell>
   );
