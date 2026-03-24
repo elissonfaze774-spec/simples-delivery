@@ -9,9 +9,10 @@ import { AdminOrders } from './pages/admin/Orders';
 import { AdminProducts } from './pages/admin/Products';
 import { AdminSettings } from './pages/admin/Settings';
 import { AdminCoupons } from './pages/admin/Coupons';
+import { AdminDrivers } from './pages/admin/DriversTemp';
 import { SuperAdmin } from './pages/SuperAdmin';
-import DriverLogin from './pages/driver/Login';
-import DriverDashboard from './pages/driver/Dashboard';
+import DriverLogin from './pages/driver/LoginTemp';
+import DriverDashboard from './pages/driver/Dashboardtemp';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export const router = createBrowserRouter([
@@ -80,6 +81,14 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute allowedRoles={['admin']}>
         <AdminCoupons />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/drivers',
+    element: (
+      <ProtectedRoute allowedRoles={['admin']}>
+        <AdminDrivers />
       </ProtectedRoute>
     ),
   },
