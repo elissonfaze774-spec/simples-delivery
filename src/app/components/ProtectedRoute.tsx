@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import type { User } from '../types';
 
-type AllowedRole = User['role'];
+type AllowedRole = User['role'] | 'delivery-driver';
 
 type ProtectedRouteProps = {
   children: React.ReactNode;
@@ -26,16 +26,23 @@ export default function ProtectedRoute({
   }
 
   if (!user) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    const isDriverRoute = location.pathname.startsWith('/driver');
+    return (
+      <Navigate
+        to={isDriverRoute ? '/driver/login' : '/login'}
+        replace
+        state={{ from: location }}
+      />
+    );
   }
 
-  if (!allowedRoles.includes(user.role)) {
+  if (!allowedRoles.includes(user.role as AllowedRole)) {
     if (user.role === 'super-admin') {
       return <Navigate to="/super-admin" replace />;
     }
 
     if (user.role === 'delivery-driver') {
-      return <Navigate to="/driver" replace />;
+      return <Navigate to="/driver/dashboard" replace />;
     }
 
     return <Navigate to="/admin" replace />;
