@@ -16,6 +16,7 @@ import {
   Trash2,
   UserRound,
   Wand2,
+  Pencil,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
@@ -115,6 +116,7 @@ export function AdminDrivers() {
   const [saving, setSaving] = useState(false);
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
   const [togglingIds, setTogglingIds] = useState<string[]>([]);
+  const [resettingIds, setResettingIds] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [storeId, setStoreId] = useState<string>('');
   const [storeName, setStoreName] = useState<string>('Minha loja');
@@ -253,10 +255,7 @@ export function AdminDrivers() {
 
   async function handleCopyCredentials(email: string, password?: string) {
     try {
-      const text = password
-        ? `Login: ${email}\nSenha: ${password}`
-        : `Login: ${email}`;
-
+      const text = password ? `Login: ${email}\nSenha: ${password}` : `Login: ${email}`;
       await navigator.clipboard.writeText(text);
       toast.success('Dados copiados.');
     } catch {
@@ -315,23 +314,25 @@ export function AdminDrivers() {
       setSaving(true);
 
       if (editingId) {
-        const { error } = await supabase
-          .from('drivers')
-          .update({
+        const { data, error } = await supabase.functions.invoke('create-driver', {
+          body: {
+            action: 'update',
+            driverId: editingId,
             name,
             email,
             phone,
             active: form.active,
-            status: form.active ? 'active' : 'inactive',
-          })
-          .eq('id', editingId);
+          },
+        });
 
         if (error) throw error;
+        if (data?.error) throw new Error(data.error);
 
         toast.success('Entregador atualizado com sucesso.');
       } else {
         const { data, error } = await supabase.functions.invoke('create-driver', {
           body: {
+            action: 'create',
             name,
             email,
             phone,
@@ -357,14 +358,21 @@ export function AdminDrivers() {
     }
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(driver: DriverRow) {
     try {
-      setDeletingIds((prev) => [...prev, id]);
+      setDeletingIds((prev) => [...prev, driver.id]);
 
-      const { error } = await supabase.from('drivers').delete().eq('id', id);
+      const { data, error } = await supabase.functions.invoke('create-driver', {
+        body: {
+          action: 'delete',
+          driverId: driver.id,
+        },
+      });
+
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
-      if (editingId === id) {
+      if (editingId === driver.id) {
         resetForm();
       }
 
@@ -375,7 +383,7 @@ export function AdminDrivers() {
       const message = error instanceof Error ? error.message : 'Erro ao excluir entregador.';
       toast.error(message);
     } finally {
-      setDeletingIds((prev) => prev.filter((item) => item !== id));
+      setDeletingIds((prev) => prev.filter((item) => item !== driver.id));
     }
   }
 
@@ -385,15 +393,16 @@ export function AdminDrivers() {
 
       const nextActive = !(driver.active !== false);
 
-      const { error } = await supabase
-        .from('drivers')
-        .update({
+      const { data, error } = await supabase.functions.invoke('create-driver', {
+        body: {
+          action: 'toggle',
+          driverId: driver.id,
           active: nextActive,
-          status: nextActive ? 'active' : 'inactive',
-        })
-        .eq('id', driver.id);
+        },
+      });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       toast.success(nextActive ? 'Entregador ativado.' : 'Entregador desativado.');
       await loadDrivers();
@@ -403,6 +412,43 @@ export function AdminDrivers() {
       toast.error(message);
     } finally {
       setTogglingIds((prev) => prev.filter((item) => item !== driver.id));
+    }
+  }
+
+  async function handleResetPassword(driver: DriverRow) {
+    const newPassword = window.prompt(
+      `Digite a nova senha para ${driver.name || driver.email || 'este entregador'}:`,
+      ''
+    );
+
+    if (!newPassword) return;
+
+    if (newPassword.trim().length < 6) {
+      toast.error('A nova senha precisa ter pelo menos 6 caracteres.');
+      return;
+    }
+
+    try {
+      setResettingIds((prev) => [...prev, driver.id]);
+
+      const { data, error } = await supabase.functions.invoke('create-driver', {
+        body: {
+          action: 'reset-password',
+          driverId: driver.id,
+          password: newPassword.trim(),
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success('Senha redefinida com sucesso.');
+    } catch (error: unknown) {
+      console.error(error);
+      const message = error instanceof Error ? error.message : 'Erro ao redefinir senha.';
+      toast.error(message);
+    } finally {
+      setResettingIds((prev) => prev.filter((item) => item !== driver.id));
     }
   }
 
@@ -654,6 +700,8 @@ export function AdminDrivers() {
               >
                 {saving ? (
                   <Save className="mr-2 h-4 w-4" />
+                ) : editingId ? (
+                  <Pencil className="mr-2 h-4 w-4" />
                 ) : (
                   <Plus className="mr-2 h-4 w-4" />
                 )}
@@ -723,6 +771,7 @@ export function AdminDrivers() {
               filteredDrivers.map((driver) => {
                 const isDeleting = deletingIds.includes(driver.id);
                 const isToggling = togglingIds.includes(driver.id);
+                const isResetting = resettingIds.includes(driver.id);
 
                 return (
                   <div
@@ -786,6 +835,7 @@ export function AdminDrivers() {
                           onClick={() => handleEdit(driver)}
                           className="rounded-full border-white/10 bg-white/[0.04] text-white hover:bg-white/10"
                         >
+                          <Pencil className="mr-2 h-4 w-4" />
                           Editar
                         </Button>
 
@@ -797,6 +847,17 @@ export function AdminDrivers() {
                         >
                           <Copy className="mr-2 h-4 w-4" />
                           Copiar login
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={isResetting}
+                          onClick={() => handleResetPassword(driver)}
+                          className="rounded-full border-[#EA1D2C]/25 bg-[#EA1D2C]/10 text-[#ff808a] hover:bg-[#EA1D2C]/15"
+                        >
+                          <KeyRound className="mr-2 h-4 w-4" />
+                          {isResetting ? 'Redefinindo...' : 'Redefinir senha'}
                         </Button>
 
                         <Button
@@ -818,7 +879,7 @@ export function AdminDrivers() {
                           type="button"
                           variant="outline"
                           disabled={isDeleting}
-                          onClick={() => handleDelete(driver.id)}
+                          onClick={() => handleDelete(driver)}
                           className="rounded-full border-rose-500/20 bg-rose-500/10 text-rose-300 hover:bg-rose-500/15"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
