@@ -24,152 +24,113 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-    const admin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false },
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return json({ error: 'Não autorizado.' }, 401)
+    }
+
+    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    const body = await req.json()
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+
     const {
-      adminUserId,
-      storeId,
-      name,
-      email,
-      phone,
-      active = true,
-      password,
-    } = body ?? {}
+      data: { user },
+      error: userError,
+    } = await userClient.auth.getUser()
 
-    const cleanName = String(name || '').trim()
-    const cleanEmail = String(email || '').trim().toLowerCase()
-    const cleanPhone = String(phone || '').replace(/\D/g, '')
-    const cleanStoreId = String(storeId || '').trim()
-    const cleanAdminUserId = String(adminUserId || '').trim()
-    const cleanPassword = String(password || '').trim()
-
-    if (!cleanAdminUserId) {
-      return json({ error: 'Admin não identificado.' }, 400)
+    if (userError || !user) {
+      return json({ error: 'Admin não autenticado.' }, 401)
     }
 
-    if (!cleanStoreId) {
-      return json({ error: 'Loja não identificada.' }, 400)
-    }
+    const body = await req.json().catch(() => null)
+    const name = String(body?.name || '').trim()
+    const email = String(body?.email || '').trim().toLowerCase()
+    const phone = String(body?.phone || '').replace(/\D/g, '')
+    const password = String(body?.password || '').trim()
+    const active = body?.active !== false
 
-    if (!cleanName || !cleanEmail || !cleanPhone || !cleanPassword) {
+    if (!name || !email || !phone || !password) {
       return json({ error: 'Preencha nome, email, telefone e senha.' }, 400)
     }
 
-    if (cleanPassword.length < 6) {
-      return json({ error: 'A senha precisa ter pelo menos 6 caracteres.' }, 400)
-    }
-
-    const { data: store, error: storeError } = await admin
+    const { data: adminStore, error: storeError } = await adminClient
       .from('stores')
-      .select('id, owner_user_id')
-      .eq('id', cleanStoreId)
+      .select('id, store_name, name, owner_user_id, admin_email')
+      .or(`owner_user_id.eq.${user.id},admin_email.eq.${user.email}`)
       .maybeSingle()
 
     if (storeError) {
       return json({ error: storeError.message }, 400)
     }
 
-    if (!store) {
-      return json({ error: 'Loja não encontrada.' }, 404)
+    if (!adminStore?.id) {
+      return json({ error: 'Loja do admin não encontrada.' }, 404)
     }
 
-    if (String(store.owner_user_id || '') !== cleanAdminUserId) {
-      return json({ error: 'Você não tem permissão para criar entregador nessa loja.' }, 403)
-    }
-
-    const { data: existingDriver, error: existingDriverError } = await admin
+    const { data: existingDriver } = await adminClient
       .from('drivers')
       .select('id')
-      .eq('store_id', cleanStoreId)
-      .ilike('email', cleanEmail)
+      .eq('email', email)
       .maybeSingle()
 
-    if (existingDriverError) {
-      return json({ error: existingDriverError.message }, 400)
-    }
-
     if (existingDriver?.id) {
-      return json({ error: 'Já existe um entregador com esse email nessa loja.' }, 409)
+      return json({ error: 'Já existe um entregador com esse email.' }, 409)
     }
 
-    const { data: authCreated, error: authError } = await admin.auth.admin.createUser({
-      email: cleanEmail,
-      password: cleanPassword,
-      email_confirm: true,
-      user_metadata: {
-        role: 'delivery-driver',
-        name: cleanName,
-        phone: cleanPhone,
-        store_id: cleanStoreId,
-      },
-      app_metadata: {
-        role: 'delivery-driver',
-      },
-    })
+    const { data: createdUser, error: createUserError } =
+      await adminClient.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          role: 'delivery-driver',
+          name,
+        },
+      })
 
-    if (authError) {
-      return json({ error: authError.message }, 400)
+    if (createUserError || !createdUser.user?.id) {
+      return json({ error: createUserError?.message || 'Erro ao criar login.' }, 400)
     }
 
-    const authUserId = authCreated.user?.id
+    const authUserId = createdUser.user.id
 
-    if (!authUserId) {
-      return json({ error: 'Usuário do entregador não foi criado.' }, 400)
-    }
-
-    const { error: driverInsertError } = await admin
+    const { data: insertedDriver, error: insertDriverError } = await adminClient
       .from('drivers')
       .insert({
         user_id: authUserId,
-        store_id: cleanStoreId,
-        name: cleanName,
-        email: cleanEmail,
-        phone: cleanPhone,
+        store_id: adminStore.id,
+        name,
+        email,
+        phone,
         active,
         status: active ? 'active' : 'inactive',
-        password_temp: cleanPassword,
       })
+      .select('*')
+      .single()
 
-     if (driverInsertError) {
-      await admin.auth.admin.deleteUser(authUserId)
-      return json({ error: driverInsertError.message }, 400)
-    }
-
-    try {
-      await admin.from('profiles').upsert(
-        {
-          id: authUserId,
-          name: cleanName,
-          email: cleanEmail,
-          role: 'delivery-driver',
-        },
-        { onConflict: 'id' }
-      )
-    } catch (_) {
-      // ignora erro de profile
-    }
-
-    try {
-      await admin.from('user_roles').insert({
-        user_id: authUserId,
-        role: 'delivery-driver',
-      })
-    } catch (_) {
-      // ignora erro de user_roles
+    if (insertDriverError) {
+      await adminClient.auth.admin.deleteUser(authUserId)
+      return json({ error: insertDriverError.message }, 400)
     }
 
     return json({
       success: true,
-      user_id: authUserId,
-      message: 'Entregador criado com sucesso.',
+      message: 'Entregador criado com login.',
+      driver: insertedDriver,
     })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Erro interno.'
-    return json({ error: message }, 500)
+  } catch (error: any) {
+    return json({ error: error?.message || 'Erro interno.' }, 500)
   }
 })
